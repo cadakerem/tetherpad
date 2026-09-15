@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.ps5bridge.screenguard"
+    android:versionCode="2"
+    android:versionName="2.0">
+
+    <uses-sdk
+        android:minSdkVersion="14"
+        android:targetSdkVersion="28"/>
+
+    <application
+        android:label="PS5 KaraDelik"
+        android:allowBackup="false">
+
+        <activity
+            android:name=".MainActivity"
+            android:label="PS5 KaraDelik"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:launchMode="singleTask">
+            <!-- LAUNCHER kategorisi bilerek silindi, boylece telefonda simgesi gozukmeyecek! -->
+        </activity>
+
+    </application>
+</manifest>
