@@ -1,9 +1,9 @@
 # TetherPad
 
-A lightweight, zero-install, and zero-latency bridge that allows you to use your PlayStation 5 (DualSense) controller on a Windows PC by routing inputs through an Android device via a USB cable.
+A lightweight, zero-install, and zero-latency bridge that allows you to use your PlayStation 4/5 (DualShock 4 / DualSense) controller on a Windows PC by routing inputs through an Android device via a USB cable.
 
 ## 🚀 Why This Project Exists
-When connecting a PS5 controller directly to a PC via Bluetooth, you often experience severe input lag or connection drops unless you buy a dedicated Bluetooth adapter. Connecting the PS5 controller to your Android phone via Bluetooth, however, is incredibly stable. 
+When connecting a PS4/PS5 controller directly to a PC via Bluetooth, you often experience severe input lag or connection drops unless you buy a dedicated Bluetooth adapter. Connecting the PS4/PS5 controller to your Android phone via Bluetooth, however, is incredibly stable. 
 
 This project bridges that flawless Bluetooth connection from your Android phone directly to your Windows PC over a USB cable using ADB (Android Debug Bridge), effectively creating a lag-free gaming experience.
 
@@ -27,7 +27,7 @@ Since this system relies on ADB, **you MUST enable USB Debugging on your Android
 5. Connect your phone to your PC via USB. A prompt will appear on your phone asking *"Allow USB debugging?"*. Check **"Always allow from this computer"** and tap **OK**.
 
 ## 🛠️ How to Use
-1. Connect your PS5 Controller to your Android phone via Bluetooth.
+1. Connect your PS4/PS5 Controller to your Android phone via Bluetooth.
 2. Connect your Android phone to your PC via a USB cable.
 3. Run `TetherPad.exe` on your PC.
 4. **Important Note on Google Play Protect:** When the program installs the invisible 11KB background app, Google Play Protect might flag it as an "Unsafe App" simply because it was installed via ADB and has no launcher icon. **This is completely normal.** Tap *"Install anyway"* if prompted.
