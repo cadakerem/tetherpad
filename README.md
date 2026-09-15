@@ -54,5 +54,5 @@ Instead of relying on root permissions or losing the kernel race-condition again
 2. It translates these inputs and emulates them on Windows using `vgamepad` (ViGEmBus).
 3. To prevent the phone from reacting to the gamepad, it installs `ScreenGuard.apk`—a faceless Android Activity with `FLAG_SHOW_WHEN_LOCKED` and `FLAG_FULLSCREEN`. This activity consumes all `dispatchKeyEvent` and `dispatchGenericMotionEvent` events, effectively sandboxing the controller inputs while maintaining a 0.0f screen brightness.
 
-## License
-MIT License
+## 📜 License
+This project is licensed under the [MIT License](LICENSE).
