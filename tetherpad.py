@@ -423,6 +423,12 @@ user32 = ctypes.WinDLL('user32')
 hWnd = kernel32.GetConsoleWindow()
 console_visible = True
 
+# Disable the X (Close) button on the console window so users don't accidentally kill the background process
+if hWnd:
+    hMenu = user32.GetSystemMenu(hWnd, False)
+    if hMenu:
+        user32.DeleteMenu(hMenu, 0xF060, 0) # SC_CLOSE
+
 def hide_console():
     if hWnd: user32.ShowWindow(hWnd, 0)
 
@@ -444,10 +450,13 @@ def quit_app(icon, item):
     os._exit(0)
 
 def create_image():
-    # Simple icon: blue background with a white circle
+    # Mavi zemin uzerine beyaz T harfi (dikdortgenlerle cizildi - font sorunu yasamamak icin)
     image = Image.new('RGB', (64, 64), color=(0, 120, 215))
     draw = ImageDraw.Draw(image)
-    draw.ellipse((16, 16, 48, 48), fill=(255, 255, 255))
+    # T'nin ust yatay cizgisi
+    draw.rectangle((16, 16, 48, 24), fill=(255, 255, 255))
+    # T'nin alt dikey cizgisi
+    draw.rectangle((28, 24, 36, 52), fill=(255, 255, 255))
     return image
 
 if __name__ == '__main__':
