@@ -3,8 +3,23 @@ import subprocess
 
 if os.name == "nt":
     CREATE_NO_WINDOW = 0x08000000
+    _orig_run = subprocess.run
+    _orig_popen = subprocess.Popen
+
+    def _run_no_window(*args, **kwargs):
+        kwargs['creationflags'] = kwargs.get('creationflags', 0) | CREATE_NO_WINDOW
+        return _orig_run(*args, **kwargs)
+
+    def _popen_no_window(*args, **kwargs):
+        kwargs['creationflags'] = kwargs.get('creationflags', 0) | CREATE_NO_WINDOW
+        return _orig_popen(*args, **kwargs)
+
+    subprocess.run = _run_no_window
+    subprocess.Popen = _popen_no_window
 else:
     CREATE_NO_WINDOW = 0
+
+
 
 import vgamepad as vg
 import time
