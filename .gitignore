@@ -1,21 +1,9 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Distribution / packaging
-dist/
+*.exe
+*.apk
+platform-tools/
+mapping.json
 build/
-*.egg-info/
-
-# Explicitly allow PyInstaller spec files
-!*.spec
+dist/
+*.log
+__pycache__/
+*.spec
