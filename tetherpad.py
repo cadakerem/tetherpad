@@ -418,30 +418,15 @@ def toggle_startup(icon, item):
     except Exception as e:
         print(f"Startup toggle error: {e}")
 
-kernel32 = ctypes.WinDLL('kernel32')
-user32 = ctypes.WinDLL('user32')
-hWnd = kernel32.GetConsoleWindow()
-console_visible = True
+log_path = os.path.join(os.path.dirname(get_exe_path()), "tetherpad.log")
+sys.stdout = open(log_path, "w", encoding="utf-8", buffering=1)
+sys.stderr = sys.stdout
 
-# Disable the X (Close) button on the console window so users don't accidentally kill the background process
-if hWnd:
-    hMenu = user32.GetSystemMenu(hWnd, False)
-    if hMenu:
-        user32.DeleteMenu(hMenu, 0xF060, 0) # SC_CLOSE
-
-def hide_console():
-    if hWnd: user32.ShowWindow(hWnd, 0)
-
-def show_console():
-    if hWnd: user32.ShowWindow(hWnd, 5)
-
-def toggle_console(icon, item):
-    global console_visible
-    if console_visible:
-        hide_console()
-    else:
-        show_console()
-    console_visible = not console_visible
+def open_logs(icon, item):
+    try:
+        os.startfile(log_path)
+    except:
+        pass
 
 def quit_app(icon, item):
     icon.stop()
@@ -460,17 +445,13 @@ def create_image():
     return image
 
 if __name__ == '__main__':
-    if "--hidden" in sys.argv:
-        hide_console()
-        console_visible = False
-    
     # Run the main loop in a background thread
     worker = threading.Thread(target=run, daemon=True)
     worker.start()
     
     # Create the tray menu
     menu = pystray.Menu(
-        pystray.MenuItem("Show Console Log", toggle_console, checked=lambda item: console_visible),
+        pystray.MenuItem("Show Logs (Notepad)", open_logs),
         pystray.MenuItem("Start with Windows", toggle_startup, checked=lambda item: is_startup_enabled()),
         pystray.MenuItem("Quit", quit_app)
     )
