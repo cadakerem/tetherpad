@@ -9,9 +9,12 @@ This project bridges that flawless Bluetooth connection from your Android phone 
 
 ## ✨ Features
 * **Zero Input Lag:** Routes raw kernel-level inputs via USB using ADB, bypassing Android's UI layer entirely.
+* **Silent Background Service:** Runs completely windowless as a System Tray icon. No annoying black command prompts or taskbar clutter.
+* **System Tray Integration:** Access real-time connection logs directly via Notepad, toggle "Start with Windows", or safely quit the application with a simple right-click on the 'T' icon.
+* **Fully Portable (No ADB Setup):** You don't need to download the Android SDK or mess with environment variables. Custom `platform-tools` are bundled and ready to go out of the box.
 * **Plug & Play (Invisible App):** Automatically installs an invisible, 11KB background app ("BlackHole") to your phone when you start the program.
-* **Battery Saver (BlackHole Mode):** The invisible app creates a pure black overlay on your phone, reduces hardware brightness to 0%, and swallows all controller inputs so your phone doesn't accidentally navigate menus or call emergency numbers while you're playing.
-* **Auto-Destruct:** The moment you unplug the USB cable or turn off your controller, the black screen closes instantly and your phone returns to normal.
+* **Battery Saver (BlackHole Mode):** The invisible app creates a pure black overlay on your phone, reduces hardware brightness to 0%, and swallows all controller inputs so your phone doesn't accidentally navigate menus while you're playing.
+* **Auto-Destruct:** The moment you unplug the USB cable or close the bridge, the black screen closes instantly and your phone returns to normal.
 * **Universal Compatibility:** Tested and working on Android versions as old as Android 4.4.4 (KitKat) up to Android 14+.
 
 ## 🗺️ Roadmap
@@ -29,11 +32,13 @@ Since this system relies on ADB, **you MUST enable USB Debugging on your Android
 ## 🛠️ How to Use
 1. Connect your PS4/PS5 Controller to your Android phone via Bluetooth.
 2. Connect your Android phone to your PC via a USB cable.
-3. Run `TetherPad.exe` on your PC.
+3. Run `TetherPad.exe` on your PC. 
+   *(Note: The app runs in "Windowless" mode. It will instantly hide in your System Tray next to the clock as a 'T' icon.)*
 4. **Important Note on Google Play Protect:** When the program installs the invisible 11KB background app, Google Play Protect might flag it as an "Unsafe App" simply because it was installed via ADB and has no launcher icon. **This is completely normal.** Tap *"Install anyway"* if prompted.
 5. Your phone screen will turn completely black (BlackHole mode active). 
 6. Start playing your game on Steam/Windows!
-7. When you're done, simply **unplug the USB cable** or press **Ctrl+C** on the console. The black screen will disappear instantly.
+7. **To view logs:** Right-click the 'T' icon in your system tray and select **Show Logs (Notepad)**.
+8. **To stop playing:** Simply unplug the USB cable or right-click the tray icon and click **Quit**.
 
 ## 📊 Compatibility & Tested Devices
 This software uses core Linux kernel commands (`getevent`) to read inputs, making it highly universal. However, strict OEM policies might affect behavior.
@@ -42,11 +47,9 @@ This software uses core Linux kernel commands (`getevent`) to read inputs, makin
 |--------|-----------------|--------|
 | Sony Xperia E4g (E2003) | Android 4.4.4 (KitKat) | ✅ Working flawlessly |
 | LG Aristo (MS210) | Android 7.0 (Nougat) | ✅ Working flawlessly |
-| Samsung (Knox) Devices | Android 10+ | ⏳ Needs testing (PRs welcome) |
-| Xiaomi (MIUI/HyperOS) | Android 10+ | ⏳ Needs testing (PRs welcome) |
-| Google Pixel (Stock) | Android 13+ | ⏳ Needs testing (PRs welcome) |
-
-*Note: On devices with strict SELinux policies, reading `/dev/input` via ADB shell might be restricted. Community testing and Pull Requests are highly appreciated!*
+| Samsung (Knox) Devices | Android 10+ | ⏳ Needs testing |
+| Xiaomi (MIUI/HyperOS) | Android 10+ | ⏳ Needs testing |
+| Google Pixel (Stock) | Android 13+ | ⏳ Needs testing |
 
 ## 🧑‍💻 Technical Architecture
 Instead of relying on root permissions or losing the kernel race-condition against Android's wake-up triggers, this bridge utilizes a companion APK strategy:
