@@ -1,4 +1,10 @@
 import subprocess
+
+if os.name == "nt":
+    CREATE_NO_WINDOW = 0x08000000
+else:
+    CREATE_NO_WINDOW = 0
+
 import vgamepad as vg
 import time
 import sys
@@ -205,7 +211,7 @@ def run():
             print(f"           (Ensure the USB cable is connected)\n")
             
             # USB'yi bekle
-            subprocess.run([adb_cmd, "wait-for-device"])
+            subprocess.run([adb_cmd, "wait-for-device"], creationflags=CREATE_NO_WINDOW)
             
             # BT kolu bekle ve otomatik bul
             device_node = None
