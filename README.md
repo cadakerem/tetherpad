@@ -29,17 +29,6 @@ This project bridges that flawless Bluetooth connection from your Android phone 
 2. **Windows SmartScreen:** Since `TetherPad.exe` is a standalone executable compiled with PyInstaller and isn't digitally signed, Windows Defender or SmartScreen may flag it. If you see a blue *"Windows protected your PC"* warning, simply click **More info** > **Run anyway**.
 3. **Google Play Protect:** When the program installs the invisible 11KB background app, Google Play Protect might flag it as an "Unsafe App" simply because it was installed via ADB and has no launcher icon. **This is completely normal.** Tap *"Install anyway"* if prompted.
 
-## 🛠️ How to Use
-1. Download the latest `TetherPad_v1.0.0.zip` from the **[Releases](../../releases)** page and extract it to a folder.
-2. Connect your PS4/PS5 Controller to your Android phone via Bluetooth.
-3. Connect your Android phone to your PC via a USB cable.
-4. Run `TetherPad.exe` on your PC. 
-   *(Note: The app runs in "Windowless" mode. It will instantly hide in your System Tray next to the clock as a 'T' icon.)*
-5. Your phone screen will turn completely black (BlackHole mode active). 
-6. Start playing your game on Steam/Windows!
-7. **To view logs:** Right-click the 'T' icon in your system tray and select **Show Logs (Notepad)**.
-8. **To stop playing:** Simply unplug the USB cable or right-click the tray icon and click **Quit**.
-
 ## 📊 Compatibility & Tested Devices
 This software uses core Linux kernel commands (`getevent`) to read inputs, making it highly universal. However, strict OEM policies might affect behavior.
 
@@ -56,6 +45,24 @@ Instead of relying on root permissions or losing the kernel race-condition again
 1. The Python script spawns an `adb shell getevent` listener to stream raw hex inputs.
 2. It translates these inputs and emulates them on Windows using `vgamepad` (ViGEmBus).
 3. To prevent the phone from reacting to the gamepad, it installs `ScreenGuard.apk`—a faceless Android Activity with `FLAG_SHOW_WHEN_LOCKED` and `FLAG_FULLSCREEN`. This activity consumes all `dispatchKeyEvent` and `dispatchGenericMotionEvent` events, effectively sandboxing the controller inputs while maintaining a 0.0f screen brightness.
+
+## 🛠️ How to Use
+1. Download the latest `TetherPad_v1.0.0.zip` from the **[Releases](../../releases)** page and extract it to a folder.
+2. Connect your PS4/PS5 Controller to your Android phone via Bluetooth.
+3. Connect your Android phone to your PC via a USB cable.
+4. Run `TetherPad.exe` on your PC. 
+   *(Note: The app runs in "Windowless" mode. It will instantly hide in your System Tray next to the clock as a 'T' icon.)*
+5. Your phone screen will turn completely black (BlackHole mode active). 
+6. Start playing your game on Steam/Windows!
+7. **To view logs:** Right-click the 'T' icon in your system tray and select **Show Logs (Notepad)**.
+8. **To stop playing:** Simply unplug the USB cable or right-click the tray icon and click **Quit**.
+
+## 🧑‍💻 Developer & Contributions
+Developed by Kerem Barbaros Karnabat (@cadakerem).
+
+> **Note on Repository Structure:** [TODO: Add any specific notes about the repository structure here, e.g., source vs build artifacts.]
+
+Contributions, issues, and feature requests are welcome! Feel free to check the [Issues page](../../issues).
 
 ## 📜 License
 This project is licensed under the [MIT License](LICENSE).
