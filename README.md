@@ -58,7 +58,7 @@ Instead of relying on root permissions or losing the kernel race-condition again
 8. **To stop playing:** Simply unplug the USB cable or right-click the tray icon and click **Quit**.
 
 ## 🧑‍💻 Developer & Contributions
-Developed by Kerem Barbaros Karnabat (@cadakerem).
+Developed by Kerem Barbaros Karnabat ([@cadakerem](https://github.com/cadakerem)).
 
 > **Note on Repository Structure:** The core Windows bridging logic is housed in `tetherpad.py` which gets compiled into a portable executable using PyInstaller (`TetherPad.spec`). The bundled ADB binaries live in the `platform-tools/` directory, while the invisible Android companion app is pre-compiled as `ScreenGuard.apk` (with its source code available in the `ScreenGuard/` folder).
 
