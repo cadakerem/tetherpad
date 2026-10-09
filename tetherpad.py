@@ -51,6 +51,241 @@ BASE_DIR = get_base_path()
 adb_cmd = os.path.join(BASE_DIR, "platform-tools", "adb.exe")
 mapping_file = os.path.join(BASE_DIR, "mapping.json")
 
+DEFAULT_MAPPING = {
+    "buttons": {
+        "CROSS": "0131",
+        "CIRCLE": "0132",
+        "SQUARE": "0130",
+        "TRIANGLE": "0133",
+        "L1": "0134",
+        "R1": "0135",
+        "L2_BTN": "0136",
+        "R2_BTN": "0137",
+        "SHARE": "0138",
+        "OPTIONS": "0139",
+        "L3": "013a",
+        "R3": "013b",
+        "PS": "013c",
+        "TOUCHPAD": "013d"
+    },
+    "axes": {
+        "LX": {"type": "0003", "code": "0000"},
+        "LY": {"type": "0003", "code": "0001"},
+        "RX": {"type": "0003", "code": "0002"},
+        "RY": {"type": "0003", "code": "0005"},
+        "L2": {"type": "0003", "code": "0003"},
+        "R2": {"type": "0003", "code": "0004"},
+        "DPAD_X": {"type": "0003", "code": "0010"},
+        "DPAD_Y": {"type": "0003", "code": "0011"}
+    }
+}
+
+def ensure_mapping_config():
+    """Checks if mapping.json exists; if not, automatically generates the default mapping."""
+    if not os.path.exists(mapping_file):
+        try:
+            with open(mapping_file, "w", encoding="utf-8") as f:
+                json.dump(DEFAULT_MAPPING, f, indent=4)
+            print("[+] Generated default mapping configuration: mapping.json")
+        except Exception as e:
+            print(f"[!] Warning: Could not write default mapping.json: {e}")
+
+_wizard_running = False
+
+def open_calibration_wizard(icon=None, item=None):
+    """Launches the controller button calibration wizard GUI in a background thread."""
+    global _wizard_running
+    if _wizard_running:
+        return
+    threading.Thread(target=_run_calibration_wizard_gui, daemon=True).start()
+
+def _run_calibration_wizard_gui():
+    global _wizard_running
+    _wizard_running = True
+    try:
+        import tkinter as tk
+        from tkinter import ttk, messagebox
+
+        root = tk.Tk()
+        root.title("TetherPad - Controller Calibration")
+        root.geometry("480x430")
+        root.resizable(False, False)
+        root.attributes("-topmost", True)
+
+        bg_color = "#1e1e2e"
+        fg_color = "#cdd6f4"
+        accent_color = "#89b4fa"
+        btn_bg = "#313244"
+
+        root.configure(bg=bg_color)
+
+        buttons_to_map = [
+            ("CROSS", "Cross / A (X)"),
+            ("CIRCLE", "Circle / B (O)"),
+            ("SQUARE", "Square / X (□)"),
+            ("TRIANGLE", "Triangle / Y (△)"),
+            ("L1", "L1 (Left Bumper)"),
+            ("R1", "R1 (Right Bumper)"),
+            ("L2_BTN", "L2 (Left Trigger Button)"),
+            ("R2_BTN", "R2 (Right Trigger Button)"),
+            ("SHARE", "Share / Select / Create"),
+            ("OPTIONS", "Options / Start"),
+            ("L3", "L3 (Left Stick Click)"),
+            ("R3", "R3 (Right Stick Click)"),
+            ("PS", "PS / Home Button"),
+            ("TOUCHPAD", "Touchpad Click"),
+        ]
+
+        current_idx = [0]
+        recorded = dict(DEFAULT_MAPPING["buttons"])
+        if os.path.exists(mapping_file):
+            try:
+                with open(mapping_file, "r", encoding="utf-8") as f:
+                    saved = json.load(f)
+                    recorded.update(saved.get("buttons", {}))
+            except Exception:
+                pass
+
+        stop_listener = threading.Event()
+
+        title_lbl = tk.Label(root, text="Controller Calibration Wizard", font=("Segoe UI", 14, "bold"), bg=bg_color, fg=accent_color)
+        title_lbl.pack(pady=(15, 5))
+
+        desc_lbl = tk.Label(root, text="Press each button on your controller when prompted.", font=("Segoe UI", 10), bg=bg_color, fg="#a6adc8")
+        desc_lbl.pack(pady=(0, 15))
+
+        card_frame = tk.Frame(root, bg="#252538", bd=2, relief="groove")
+        card_frame.pack(fill="x", padx=30, pady=10)
+
+        step_lbl = tk.Label(card_frame, text="Step 1 of 14", font=("Segoe UI", 10, "italic"), bg="#252538", fg="#9399b2")
+        step_lbl.pack(pady=(10, 2))
+
+        target_btn_lbl = tk.Label(card_frame, text="", font=("Segoe UI", 16, "bold"), bg="#252538", fg="#f38ba8")
+        target_btn_lbl.pack(pady=(2, 10))
+
+        status_lbl = tk.Label(root, text="Listening for input from phone...", font=("Segoe UI", 10), bg=bg_color, fg="#a6e3a1")
+        status_lbl.pack(pady=5)
+
+        progress = ttk.Progressbar(root, orient="horizontal", length=420, mode="determinate")
+        progress.pack(pady=10)
+
+        def update_ui():
+            idx = current_idx[0]
+            if idx < len(buttons_to_map):
+                key, label = buttons_to_map[idx]
+                step_lbl.config(text=f"Step {idx + 1} of {len(buttons_to_map)}")
+                target_btn_lbl.config(text=f"Press: {label}")
+                progress["value"] = (idx / len(buttons_to_map)) * 100
+            else:
+                finish_calibration()
+
+        def save_and_close():
+            nonlocal stop_listener
+            stop_listener.set()
+            try:
+                current_cfg = dict(DEFAULT_MAPPING)
+                if os.path.exists(mapping_file):
+                    try:
+                        with open(mapping_file, "r", encoding="utf-8") as f:
+                            current_cfg = json.load(f)
+                    except Exception:
+                        pass
+                current_cfg["buttons"] = recorded
+                with open(mapping_file, "w", encoding="utf-8") as f:
+                    json.dump(current_cfg, f, indent=4)
+                load_mapping()
+                messagebox.showinfo("TetherPad", "Controller mapping saved successfully!")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to save mapping: {e}")
+            finally:
+                root.destroy()
+
+        def finish_calibration():
+            step_lbl.config(text="Calibration Complete!")
+            target_btn_lbl.config(text="All buttons mapped!", fg="#a6e3a1")
+            progress["value"] = 100
+            status_lbl.config(text="Saving configuration...", fg="#a6e3a1")
+            root.after(600, save_and_close)
+
+        def on_skip():
+            current_idx[0] += 1
+            update_ui()
+
+        def on_reset_defaults():
+            nonlocal recorded
+            recorded = dict(DEFAULT_MAPPING["buttons"])
+            try:
+                with open(mapping_file, "w", encoding="utf-8") as f:
+                    json.dump(DEFAULT_MAPPING, f, indent=4)
+                load_mapping()
+                messagebox.showinfo("TetherPad", "Reset to default PS4/PS5 layout complete.")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to reset mapping: {e}")
+            finally:
+                stop_listener.set()
+                root.destroy()
+
+        btn_frame = tk.Frame(root, bg=bg_color)
+        btn_frame.pack(side="bottom", fill="x", pady=15, padx=30)
+
+        skip_btn = tk.Button(btn_frame, text="Skip Button", command=on_skip, bg=btn_bg, fg=fg_color, relief="flat", padx=10, pady=5)
+        skip_btn.pack(side="left")
+
+        reset_btn = tk.Button(btn_frame, text="Reset to Defaults", command=on_reset_defaults, bg="#45475a", fg=fg_color, relief="flat", padx=10, pady=5)
+        reset_btn.pack(side="left", padx=10)
+
+        cancel_btn = tk.Button(btn_frame, text="Cancel", command=lambda: (stop_listener.set(), root.destroy()), bg=btn_bg, fg=fg_color, relief="flat", padx=10, pady=5)
+        cancel_btn.pack(side="right")
+
+        def listen_events():
+            target_node = device_node or find_device_node()
+            if not target_node:
+                root.after(0, lambda: status_lbl.config(text="Waiting for phone & controller connection...", fg="#f9e2af"))
+                while not stop_listener.is_set() and not target_node:
+                    time.sleep(1)
+                    target_node = device_node or find_device_node()
+                if stop_listener.is_set():
+                    return
+                root.after(0, lambda: status_lbl.config(text=f"Listening on {target_node}", fg="#a6e3a1"))
+
+            try:
+                proc = _orig_popen(
+                    [adb_cmd, "shell", "-tt", f"getevent {target_node}"],
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
+                )
+                for line in iter(proc.stdout.readline, ''):
+                    if stop_listener.is_set():
+                        break
+                    parts = line.strip().split()
+                    if len(parts) == 3 and parts[0] == '0001':
+                        code = parts[1]
+                        try:
+                            val = int(parts[2], 16)
+                        except ValueError:
+                            continue
+                        if val == 1:
+                            idx = current_idx[0]
+                            if idx < len(buttons_to_map):
+                                key, _ = buttons_to_map[idx]
+                                recorded[key] = code
+                                current_idx[0] += 1
+                                root.after(0, update_ui)
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
+            except Exception as e:
+                print(f"[Wizard Error] {e}")
+
+        listener_thread = threading.Thread(target=listen_events, daemon=True)
+        listener_thread.start()
+
+        update_ui()
+        root.mainloop()
+        stop_listener.set()
+    finally:
+        _wizard_running = False
+
 def is_vigembus_installed():
     """Checks if ViGEmBus kernel driver or service is installed on the system."""
     try:
@@ -159,6 +394,55 @@ except Exception as e:
 
 import pystray
 from PIL import Image, ImageDraw
+
+ensure_mapping_config()
+
+def load_mapping():
+    """Loads controller mapping configuration from mapping.json or falls back to DEFAULT_MAPPING."""
+    global BTN_MAP, SPECIAL_BTN_MAP, AXIS_LX, AXIS_LY, AXIS_RX, AXIS_RY, AXIS_L2, AXIS_R2, DPAD_X, DPAD_Y
+    ensure_mapping_config()
+    config = DEFAULT_MAPPING
+    if os.path.exists(mapping_file):
+        try:
+            with open(mapping_file, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except Exception as e:
+            print(f"[!] Error loading mapping.json: {e}")
+            config = DEFAULT_MAPPING
+
+    b = config.get("buttons", {})
+    a = config.get("axes", {})
+
+    BTN_MAP = {
+        b.get("CROSS"): vg.DS4_BUTTONS.DS4_BUTTON_CROSS,
+        b.get("CIRCLE"): vg.DS4_BUTTONS.DS4_BUTTON_CIRCLE,
+        b.get("SQUARE"): vg.DS4_BUTTONS.DS4_BUTTON_SQUARE,
+        b.get("TRIANGLE"): vg.DS4_BUTTONS.DS4_BUTTON_TRIANGLE,
+        b.get("L1"): vg.DS4_BUTTONS.DS4_BUTTON_SHOULDER_LEFT,
+        b.get("R1"): vg.DS4_BUTTONS.DS4_BUTTON_SHOULDER_RIGHT,
+        b.get("L2_BTN"): vg.DS4_BUTTONS.DS4_BUTTON_TRIGGER_LEFT,
+        b.get("R2_BTN"): vg.DS4_BUTTONS.DS4_BUTTON_TRIGGER_RIGHT,
+        b.get("SHARE"): vg.DS4_BUTTONS.DS4_BUTTON_SHARE,
+        b.get("OPTIONS"): vg.DS4_BUTTONS.DS4_BUTTON_OPTIONS,
+        b.get("L3"): vg.DS4_BUTTONS.DS4_BUTTON_THUMB_LEFT,
+        b.get("R3"): vg.DS4_BUTTONS.DS4_BUTTON_THUMB_RIGHT,
+    }
+    BTN_MAP = {k: v for k, v in BTN_MAP.items() if k}
+
+    SPECIAL_BTN_MAP = {
+        b.get("PS"): vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_PS,
+        b.get("TOUCHPAD"): vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_TOUCHPAD,
+    }
+    SPECIAL_BTN_MAP = {k: v for k, v in SPECIAL_BTN_MAP.items() if k}
+
+    AXIS_LX = a.get("LX", {}).get("code")
+    AXIS_LY = a.get("LY", {}).get("code")
+    AXIS_RX = a.get("RX", {}).get("code")
+    AXIS_RY = a.get("RY", {}).get("code")
+    AXIS_L2 = a.get("L2", {}).get("code")
+    AXIS_R2 = a.get("R2", {}).get("code")
+    DPAD_X = a.get("DPAD_X", {}).get("code")
+    DPAD_Y = a.get("DPAD_Y", {}).get("code")
 
 def find_device_node():
     try:
@@ -390,47 +674,7 @@ def run():
             print("Listening for PS5 Controller input... (Ctrl+C to stop completely)")
             print("=> NOTE: Undefined inputs will be ignored.\n")
             
-            if not os.path.exists(mapping_file):
-                print("\n[!] ERROR: mapping.json not found!")
-                print("[!] Please run 'TetherPad_Calibration.exe' first.\n")
-                sys.exit(1)
-            
-            with open(mapping_file, "r", encoding="utf-8") as f:
-                config = json.load(f)
-            
-            b = config.get("buttons", {})
-            a = config.get("axes", {})
-            
-            BTN_MAP = {
-                b.get("CROSS"): vg.DS4_BUTTONS.DS4_BUTTON_CROSS,
-                b.get("CIRCLE"): vg.DS4_BUTTONS.DS4_BUTTON_CIRCLE,
-                b.get("SQUARE"): vg.DS4_BUTTONS.DS4_BUTTON_SQUARE,
-                b.get("TRIANGLE"): vg.DS4_BUTTONS.DS4_BUTTON_TRIANGLE,
-                b.get("L1"): vg.DS4_BUTTONS.DS4_BUTTON_SHOULDER_LEFT,
-                b.get("R1"): vg.DS4_BUTTONS.DS4_BUTTON_SHOULDER_RIGHT,
-                b.get("L2_BTN"): vg.DS4_BUTTONS.DS4_BUTTON_TRIGGER_LEFT,
-                b.get("R2_BTN"): vg.DS4_BUTTONS.DS4_BUTTON_TRIGGER_RIGHT,
-                b.get("SHARE"): vg.DS4_BUTTONS.DS4_BUTTON_SHARE,
-                b.get("OPTIONS"): vg.DS4_BUTTONS.DS4_BUTTON_OPTIONS,
-                b.get("L3"): vg.DS4_BUTTONS.DS4_BUTTON_THUMB_LEFT,
-                b.get("R3"): vg.DS4_BUTTONS.DS4_BUTTON_THUMB_RIGHT,
-            }
-            BTN_MAP = {k: v for k, v in BTN_MAP.items() if k}
-            
-            SPECIAL_BTN_MAP = {
-                b.get("PS"): vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_PS,
-                b.get("TOUCHPAD"): vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_TOUCHPAD,
-            }
-            SPECIAL_BTN_MAP = {k: v for k, v in SPECIAL_BTN_MAP.items() if k}
-            
-            AXIS_LX = a.get("LX", {}).get("code")
-            AXIS_LY = a.get("LY", {}).get("code")
-            AXIS_RX = a.get("RX", {}).get("code")
-            AXIS_RY = a.get("RY", {}).get("code")
-            AXIS_L2 = a.get("L2", {}).get("code")
-            AXIS_R2 = a.get("R2", {}).get("code")
-            DPAD_X = a.get("DPAD_X", {}).get("code")
-            DPAD_Y = a.get("DPAD_Y", {}).get("code")
+            load_mapping()
             
             def map_axis(val):
                 return max(0, min(255, val))
@@ -591,6 +835,7 @@ if __name__ == '__main__':
     # Create the tray menu
     menu = pystray.Menu(
         pystray.MenuItem("Show Logs (Notepad)", open_logs),
+        pystray.MenuItem("Calibrate Controller", open_calibration_wizard),
         pystray.MenuItem("Start with Windows", toggle_startup, checked=lambda item: is_startup_enabled()),
         pystray.MenuItem("Quit", quit_app)
     )
