@@ -1,9 +1,9 @@
 # TetherPad
 
-A lightweight, zero-install, and zero-latency bridge that allows you to use your PlayStation 4/5 (DualShock 4 / DualSense) controller on a Windows PC by routing inputs through an Android device via a USB cable.
+A lightweight, zero-install, and zero-latency bridge that allows you to use your PlayStation 4/5 (DualShock 4 / DualSense) or Xbox (Wireless / 360 / One) controller on a Windows PC by routing inputs through an Android device via a USB cable.
 
 ## 🚀 Why This Project Exists
-When connecting a PS4/PS5 controller directly to a PC via Bluetooth, you often experience severe input lag or connection drops unless you buy a dedicated Bluetooth adapter. Connecting the PS4/PS5 controller to your Android phone via Bluetooth, however, is incredibly stable. 
+When connecting gamepads like a PS4/PS5 or Xbox controller directly to a PC via Bluetooth, you often experience severe input lag or connection drops unless you buy a dedicated Bluetooth adapter. Connecting these controllers to your Android phone via Bluetooth, however, is incredibly stable. 
 
 This project bridges that flawless Bluetooth connection from your Android phone directly to your Windows PC over a USB cable using ADB (Android Debug Bridge), effectively creating a lag-free gaming experience.
 
@@ -57,7 +57,7 @@ Instead of relying on root permissions or losing the kernel race-condition again
 
 ## 🛠️ How to Use
 1. Download the latest `TetherPad_v1.0.0.zip` from the **[Releases](../../releases)** page and extract it to a folder.
-2. Connect your PS4/PS5 Controller to your Android phone via Bluetooth.
+2. Connect your PS4/PS5 or Xbox Controller to your Android phone via Bluetooth (or via OTG cable if your controller lacks Bluetooth).
 3. Connect your Android phone to your PC via a USB cable.
 4. Run `TetherPad.exe` on your PC. 
    *(Note: The app runs in "Windowless" mode. It will instantly hide in your System Tray next to the clock as a 'T' icon.)*
