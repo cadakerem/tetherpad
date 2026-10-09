@@ -18,6 +18,7 @@ This project bridges that flawless Bluetooth connection from your Android phone 
 * **Broad Compatibility:** Tested on specific legacy devices (KitKat, Nougat); broader OEM testing for modern Android 10+ devices is currently in progress.
 
 ## 🗺️ Roadmap
+* **Bundled ViGEmBus & All-in-One Setup Wizard:** Pre-packaging `ViGEmBus_Setup.exe` into release archives for seamless offline deployment, along with an optional standalone `TetherPad_Setup.exe` that silently installs both TetherPad and ViGEmBus in a single step.
 * **Native Xbox Controller Emulation:** Currently, TetherPad bridges all connected gamepads to Windows as a **Virtual PlayStation 4 (DualShock 4)** controller. While this works flawlessly on Steam and most modern games, native Virtual Xbox 360 Controller emulation (dynamic analog conversion and layout mapping) is planned for a future update.
 * **Broader OEM Testing:** Gathering more community feedback on highly restricted custom Android ROMs.
 
