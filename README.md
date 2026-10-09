@@ -28,7 +28,7 @@ This project bridges that flawless Bluetooth connection from your Android phone 
 * **Broader OEM Testing:** Gathering more community feedback on highly restricted custom Android ROMs.
 
 ## ⚠️ Prerequisites & Warnings
-1. **ViGEmBus Driver (Virtual Controller Emulation):** TetherPad creates a virtual DualShock 4 controller on Windows via the industry-standard ViGEmBus driver.
+1. **ViGEmBus Driver (Virtual Controller Emulation):** TetherPad creates a virtual DualShock 4 or Xbox 360 controller on Windows via the industry-standard ViGEmBus driver (depending on your physical controller).
    - **Automated Setup:** If ViGEmBus is not installed, TetherPad will detect it upon launch and display a 1-click prompt to download and run the official installer automatically.
    - **Manual Installation:** You can also install it manually via Windows Terminal: `winget install ViGEm.ViGEmBus` or download the installer directly from [ViGEmBus Releases](https://github.com/nefarius/ViGEmBus/releases).
 2. **USB Debugging:** Since this system relies on ADB, **you MUST enable USB Debugging on your Android phone** for this to work. 
