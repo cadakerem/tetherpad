@@ -20,10 +20,11 @@ This project bridges that flawless Bluetooth connection from your Android phone 
   - Sony controllers spawn as native **Virtual DualShock 4 (DS4)** gamepads on Windows.
   - Xbox controllers spawn as native **Virtual Xbox 360 (X360)** gamepads with normalized analog axes (-32768..32767) and native XInput D-Pad buttons.
 * **Auto-Calibration & Custom Mapping Wizard:** Interactive dark-mode Calibration Wizard in the system tray menu (`mapping.json`), letting you rebind buttons and axes per controller profile on the fly.
+* **Automated ViGEmBus Deployment:** Gracefully detects if the required virtual gamepad driver is missing and seamlessly downloads/launches the installer for you.
 * **Broad Compatibility:** Tested on specific legacy devices (KitKat, Nougat); broader OEM testing for modern Android 10+ devices is currently in progress.
 
 ## 🗺️ Roadmap
-* **Bundled ViGEmBus & All-in-One Setup Wizard:** Pre-packaging `ViGEmBus_Setup.exe` into release archives for seamless offline deployment, along with an optional standalone `TetherPad_Setup.exe` that silently installs both TetherPad and ViGEmBus in a single step.
+* **Standalone Installer (`TetherPad_Setup.exe`):** An optional installer that silently deploys TetherPad and its dependencies in a single step.
 * **Broader OEM Testing:** Gathering more community feedback on highly restricted custom Android ROMs.
 
 ## ⚠️ Prerequisites & Warnings
