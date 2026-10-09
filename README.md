@@ -22,12 +22,15 @@ This project bridges that flawless Bluetooth connection from your Android phone 
 * **Broader OEM Testing:** Gathering more community feedback on highly restricted custom Android ROMs.
 
 ## ⚠️ Prerequisites & Warnings
-1. **USB Debugging:** Since this system relies on ADB, **you MUST enable USB Debugging on your Android phone** for this to work. 
+1. **ViGEmBus Driver (Virtual Controller Emulation):** TetherPad creates a virtual DualShock 4 controller on Windows via the industry-standard ViGEmBus driver.
+   - **Automated Setup:** If ViGEmBus is not installed, TetherPad will detect it upon launch and display a 1-click prompt to download and run the official installer automatically.
+   - **Manual Installation:** You can also install it manually via Windows Terminal: `winget install ViGEm.ViGEmBus` or download the installer directly from [ViGEmBus Releases](https://github.com/nefarius/ViGEmBus/releases).
+2. **USB Debugging:** Since this system relies on ADB, **you MUST enable USB Debugging on your Android phone** for this to work. 
    - Go to **Settings** > **About Phone**. Tap **Build Number** 7 times.
    - Go to **Developer Options** and enable **USB Debugging**.
    - Connect to PC, check **"Always allow from this computer"** when the prompt appears on your phone.
-2. **Windows SmartScreen:** Since `TetherPad.exe` is a standalone executable compiled with PyInstaller and isn't digitally signed, Windows Defender or SmartScreen may flag it. If you see a blue *"Windows protected your PC"* warning, simply click **More info** > **Run anyway**.
-3. **Google Play Protect:** When the program installs the invisible 11KB background app, Google Play Protect might flag it as an "Unsafe App" simply because it was installed via ADB and has no launcher icon. **This is completely normal.** Tap *"Install anyway"* if prompted.
+3. **Windows SmartScreen:** Since `TetherPad.exe` is a standalone executable compiled with PyInstaller and isn't digitally signed, Windows Defender or SmartScreen may flag it. If you see a blue *"Windows protected your PC"* warning, simply click **More info** > **Run anyway**.
+4. **Google Play Protect:** When the program installs the invisible 11KB background app, Google Play Protect might flag it as an "Unsafe App" simply because it was installed via ADB and has no launcher icon. **This is completely normal.** Tap *"Install anyway"* if prompted.
 
 ## 📊 Compatibility & Tested Devices
 This software uses core Linux kernel commands (`getevent`) to read inputs, making it highly universal. However, strict OEM policies might affect behavior.

@@ -21,18 +21,13 @@ else:
 
 
 
-import vgamepad as vg
 import time
 import sys
 import os
 import winreg
 import ctypes
-import pystray
-from PIL import Image, ImageDraw
-import sys
 import threading
 import json
-import os
 
 def get_base_path():
     if getattr(sys, 'frozen', False):
@@ -42,6 +37,113 @@ def get_base_path():
 BASE_DIR = get_base_path()
 adb_cmd = os.path.join(BASE_DIR, "platform-tools", "adb.exe")
 mapping_file = os.path.join(BASE_DIR, "mapping.json")
+
+def is_vigembus_installed():
+    """Checks if ViGEmBus kernel driver or service is installed on the system."""
+    try:
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Services\ViGEmBus")
+        winreg.CloseKey(key)
+        return True
+    except OSError:
+        pass
+
+    sys_root = os.environ.get("SystemRoot", r"C:\Windows")
+    sys_driver = os.path.join(sys_root, "System32", "drivers", "ViGEmBus.sys")
+    return os.path.exists(sys_driver)
+
+def ensure_vigembus():
+    """
+    Ensures the ViGEmBus driver is installed before importing or using vgamepad.
+    If missing, prompts the user with a native dialog to automatically download and run the installer.
+    """
+    if is_vigembus_installed():
+        return True
+
+    MB_YESNO = 0x00000004
+    MB_ICONQUESTION = 0x00000020
+    MB_ICONINFORMATION = 0x00000040
+    MB_ICONERROR = 0x00000010
+    MB_TOPMOST = 0x00040000
+    IDYES = 6
+
+    title = "TetherPad - ViGEmBus Driver Required"
+    msg = (
+        "TetherPad requires the ViGEmBus driver to emulate a virtual gamepad on Windows.\n\n"
+        "The ViGEmBus driver was not found on your system.\n\n"
+        "Would you like TetherPad to automatically download and launch the installer now?\n\n"
+        "• Click 'Yes' to download and install ViGEmBus.\n"
+        "• Click 'No' to open the manual download page in your browser."
+    )
+
+    resp = ctypes.windll.user32.MessageBoxW(0, msg, title, MB_YESNO | MB_ICONQUESTION | MB_TOPMOST)
+    if resp == IDYES:
+        installer_name = "ViGEmBus_Setup.exe"
+        installer_path = os.path.join(BASE_DIR, installer_name)
+
+        if not os.path.exists(installer_path):
+            import urllib.request
+            import tempfile
+            installer_url = "https://github.com/nefarius/ViGEmBus/releases/download/v1.22.0/ViGEmBus_1.22.0_x64_x86_arm64.exe"
+            installer_path = os.path.join(tempfile.gettempdir(), installer_name)
+            try:
+                urllib.request.urlretrieve(installer_url, installer_path)
+            except Exception as e:
+                ctypes.windll.user32.MessageBoxW(
+                    0,
+                    f"Failed to download ViGEmBus installer:\n{e}\n\nPlease install it manually from GitHub.",
+                    "TetherPad - Download Error",
+                    MB_ICONERROR | MB_TOPMOST
+                )
+                import webbrowser
+                webbrowser.open("https://github.com/nefarius/ViGEmBus/releases/latest")
+                sys.exit(1)
+
+        # Launch the installer with normal visible window and elevation
+        try:
+            ret = ctypes.windll.shell32.ShellExecuteW(None, "open", installer_path, None, None, 1)
+            if ret <= 32:
+                _orig_popen([installer_path])
+        except Exception as e:
+            ctypes.windll.user32.MessageBoxW(
+                0,
+                f"Failed to start installer:\n{e}",
+                "TetherPad - Launch Error",
+                MB_ICONERROR | MB_TOPMOST
+            )
+            sys.exit(1)
+
+        ctypes.windll.user32.MessageBoxW(
+            0,
+            "The ViGEmBus installer has been launched.\n\n"
+            "Please complete the installation wizard on your screen, then start TetherPad again.",
+            "TetherPad - Driver Setup",
+            MB_ICONINFORMATION | MB_TOPMOST
+        )
+        sys.exit(0)
+    else:
+        import webbrowser
+        webbrowser.open("https://github.com/nefarius/ViGEmBus/releases/latest")
+        sys.exit(0)
+
+# Check and ensure ViGEmBus driver is present before importing vgamepad
+ensure_vigembus()
+
+try:
+    import vgamepad as vg
+except Exception as e:
+    if not is_vigembus_installed():
+        ensure_vigembus()
+    else:
+        ctypes.windll.user32.MessageBoxW(
+            0,
+            f"Failed to initialize virtual gamepad:\n{e}",
+            "TetherPad - Initialization Error",
+            0x00000010 | 0x00040000
+        )
+        sys.exit(1)
+
+import pystray
+from PIL import Image, ImageDraw
 
 def find_device_node():
     try:

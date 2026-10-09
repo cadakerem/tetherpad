@@ -1,1 +1,3 @@
-# Add your python dependencies here (e.g., matplotlib>=3.5.0)
+vgamepad>=0.3.3
+pystray>=0.19.5
+Pillow>=10.0.0
