@@ -51,46 +51,80 @@ BASE_DIR = get_base_path()
 adb_cmd = os.path.join(BASE_DIR, "platform-tools", "adb.exe")
 mapping_file = os.path.join(BASE_DIR, "mapping.json")
 
-DEFAULT_MAPPING = {
-    "buttons": {
-        "CROSS": "0131",
-        "CIRCLE": "0132",
-        "SQUARE": "0130",
-        "TRIANGLE": "0133",
-        "L1": "0134",
-        "R1": "0135",
-        "L2_BTN": "0136",
-        "R2_BTN": "0137",
-        "SHARE": "0138",
-        "OPTIONS": "0139",
-        "L3": "013a",
-        "R3": "013b",
-        "PS": "013c",
-        "TOUCHPAD": "013d"
+DEFAULT_MAPPINGS = {
+    "sony": {
+        "name": "Sony DualShock 4 / DualSense",
+        "emulation": "ds4",
+        "buttons": {
+            "CROSS": "0131",
+            "CIRCLE": "0132",
+            "SQUARE": "0130",
+            "TRIANGLE": "0133",
+            "L1": "0134",
+            "R1": "0135",
+            "L2_BTN": "0136",
+            "R2_BTN": "0137",
+            "SHARE": "0138",
+            "OPTIONS": "0139",
+            "L3": "013a",
+            "R3": "013b",
+            "PS": "013c",
+            "TOUCHPAD": "013d"
+        },
+        "axes": {
+            "LX": {"type": "0003", "code": "0000"},
+            "LY": {"type": "0003", "code": "0001"},
+            "RX": {"type": "0003", "code": "0002"},
+            "RY": {"type": "0003", "code": "0005"},
+            "L2": {"type": "0003", "code": "0003"},
+            "R2": {"type": "0003", "code": "0004"},
+            "DPAD_X": {"type": "0003", "code": "0010"},
+            "DPAD_Y": {"type": "0003", "code": "0011"}
+        }
     },
-    "axes": {
-        "LX": {"type": "0003", "code": "0000"},
-        "LY": {"type": "0003", "code": "0001"},
-        "RX": {"type": "0003", "code": "0002"},
-        "RY": {"type": "0003", "code": "0005"},
-        "L2": {"type": "0003", "code": "0003"},
-        "R2": {"type": "0003", "code": "0004"},
-        "DPAD_X": {"type": "0003", "code": "0010"},
-        "DPAD_Y": {"type": "0003", "code": "0011"}
+    "xbox": {
+        "name": "Xbox Wireless Controller",
+        "emulation": "xbox360",
+        "buttons": {
+            "A": "0130",
+            "B": "0131",
+            "X": "0133",
+            "Y": "0134",
+            "LB": "0136",
+            "RB": "0137",
+            "BACK": "013a",
+            "START": "013b",
+            "L3": "013d",
+            "R3": "013e",
+            "GUIDE": "013c"
+        },
+        "axes": {
+            "LX": {"type": "0003", "code": "0000"},
+            "LY": {"type": "0003", "code": "0001"},
+            "RX": {"type": "0003", "code": "0003"},
+            "RY": {"type": "0003", "code": "0004"},
+            "LT": {"type": "0003", "code": "0002"},
+            "RT": {"type": "0003", "code": "0005"},
+            "DPAD_X": {"type": "0003", "code": "0010"},
+            "DPAD_Y": {"type": "0003", "code": "0011"}
+        }
     }
 }
 
+DEFAULT_MAPPING = DEFAULT_MAPPINGS["sony"]
+
 def ensure_mapping_config():
-    """Checks if mapping.json exists; if not, automatically generates the default mapping."""
+    """Checks if mapping.json exists; if not, automatically generates multi-profile mapping."""
     if not os.path.exists(mapping_file):
         try:
             with open(mapping_file, "w", encoding="utf-8") as f:
-                json.dump(DEFAULT_MAPPING, f, indent=4)
-            print("[+] Generated default mapping configuration: mapping.json")
+                json.dump({"profiles": DEFAULT_MAPPINGS}, f, indent=4)
+            print("[+] Generated multi-profile mapping configuration: mapping.json")
         except Exception as e:
             print(f"[!] Warning: Could not write default mapping.json: {e}")
 
 _wizard_running = False
+current_profile_type = "sony"
 
 def open_calibration_wizard(icon=None, item=None):
     """Launches the controller button calibration wizard GUI in a background thread."""
@@ -107,8 +141,7 @@ def _run_calibration_wizard_gui():
         from tkinter import ttk, messagebox
 
         root = tk.Tk()
-        root.title("TetherPad - Controller Calibration")
-        root.geometry("480x430")
+        root.geometry("490x440")
         root.resizable(False, False)
         root.attributes("-topmost", True)
 
@@ -116,39 +149,60 @@ def _run_calibration_wizard_gui():
         fg_color = "#cdd6f4"
         accent_color = "#89b4fa"
         btn_bg = "#313244"
-
         root.configure(bg=bg_color)
 
-        buttons_to_map = [
-            ("CROSS", "Cross / A (X)"),
-            ("CIRCLE", "Circle / B (O)"),
-            ("SQUARE", "Square / X (□)"),
-            ("TRIANGLE", "Triangle / Y (△)"),
-            ("L1", "L1 (Left Bumper)"),
-            ("R1", "R1 (Right Bumper)"),
-            ("L2_BTN", "L2 (Left Trigger Button)"),
-            ("R2_BTN", "R2 (Right Trigger Button)"),
-            ("SHARE", "Share / Select / Create"),
-            ("OPTIONS", "Options / Start"),
-            ("L3", "L3 (Left Stick Click)"),
-            ("R3", "R3 (Right Stick Click)"),
-            ("PS", "PS / Home Button"),
-            ("TOUCHPAD", "Touchpad Click"),
-        ]
+        active_profile = current_profile_type or "sony"
+        profile_title = "Xbox" if active_profile == "xbox" else "PlayStation"
+        root.title(f"TetherPad - Controller Calibration ({profile_title})")
+
+        if active_profile == "xbox":
+            buttons_to_map = [
+                ("A", "A Button"),
+                ("B", "B Button"),
+                ("X", "X Button"),
+                ("Y", "Y Button"),
+                ("LB", "LB (Left Bumper)"),
+                ("RB", "RB (Right Bumper)"),
+                ("BACK", "Back / View Button"),
+                ("START", "Start / Menu Button"),
+                ("L3", "L3 (Left Stick Click)"),
+                ("R3", "R3 (Right Stick Click)"),
+                ("GUIDE", "Xbox Guide Button"),
+            ]
+        else:
+            buttons_to_map = [
+                ("CROSS", "Cross / A (X)"),
+                ("CIRCLE", "Circle / B (O)"),
+                ("SQUARE", "Square / X (□)"),
+                ("TRIANGLE", "Triangle / Y (△)"),
+                ("L1", "L1 (Left Bumper)"),
+                ("R1", "R1 (Right Bumper)"),
+                ("L2_BTN", "L2 (Left Trigger Button)"),
+                ("R2_BTN", "R2 (Right Trigger Button)"),
+                ("SHARE", "Share / Create"),
+                ("OPTIONS", "Options / Start"),
+                ("L3", "L3 (Left Stick Click)"),
+                ("R3", "R3 (Right Stick Click)"),
+                ("PS", "PS Button"),
+                ("TOUCHPAD", "Touchpad Click"),
+            ]
 
         current_idx = [0]
-        recorded = dict(DEFAULT_MAPPING["buttons"])
+        recorded = dict(DEFAULT_MAPPINGS.get(active_profile, DEFAULT_MAPPINGS["sony"])["buttons"])
         if os.path.exists(mapping_file):
             try:
                 with open(mapping_file, "r", encoding="utf-8") as f:
-                    saved = json.load(f)
-                    recorded.update(saved.get("buttons", {}))
+                    raw_cfg = json.load(f)
+                    if "profiles" in raw_cfg and active_profile in raw_cfg["profiles"]:
+                        recorded.update(raw_cfg["profiles"][active_profile].get("buttons", {}))
+                    elif "buttons" in raw_cfg and active_profile == "sony":
+                        recorded.update(raw_cfg["buttons"])
             except Exception:
                 pass
 
         stop_listener = threading.Event()
 
-        title_lbl = tk.Label(root, text="Controller Calibration Wizard", font=("Segoe UI", 14, "bold"), bg=bg_color, fg=accent_color)
+        title_lbl = tk.Label(root, text=f"{profile_title} Calibration Wizard", font=("Segoe UI", 14, "bold"), bg=bg_color, fg=accent_color)
         title_lbl.pack(pady=(15, 5))
 
         desc_lbl = tk.Label(root, text="Press each button on your controller when prompted.", font=("Segoe UI", 10), bg=bg_color, fg="#a6adc8")
@@ -157,7 +211,7 @@ def _run_calibration_wizard_gui():
         card_frame = tk.Frame(root, bg="#252538", bd=2, relief="groove")
         card_frame.pack(fill="x", padx=30, pady=10)
 
-        step_lbl = tk.Label(card_frame, text="Step 1 of 14", font=("Segoe UI", 10, "italic"), bg="#252538", fg="#9399b2")
+        step_lbl = tk.Label(card_frame, text=f"Step 1 of {len(buttons_to_map)}", font=("Segoe UI", 10, "italic"), bg="#252538", fg="#9399b2")
         step_lbl.pack(pady=(10, 2))
 
         target_btn_lbl = tk.Label(card_frame, text="", font=("Segoe UI", 16, "bold"), bg="#252538", fg="#f38ba8")
@@ -166,7 +220,7 @@ def _run_calibration_wizard_gui():
         status_lbl = tk.Label(root, text="Listening for input from phone...", font=("Segoe UI", 10), bg=bg_color, fg="#a6e3a1")
         status_lbl.pack(pady=5)
 
-        progress = ttk.Progressbar(root, orient="horizontal", length=420, mode="determinate")
+        progress = ttk.Progressbar(root, orient="horizontal", length=430, mode="determinate")
         progress.pack(pady=10)
 
         def update_ui():
@@ -183,18 +237,22 @@ def _run_calibration_wizard_gui():
             nonlocal stop_listener
             stop_listener.set()
             try:
-                current_cfg = dict(DEFAULT_MAPPING)
+                out_cfg = {"profiles": dict(DEFAULT_MAPPINGS)}
                 if os.path.exists(mapping_file):
                     try:
                         with open(mapping_file, "r", encoding="utf-8") as f:
-                            current_cfg = json.load(f)
+                            saved = json.load(f)
+                            if "profiles" in saved:
+                                out_cfg["profiles"] = saved["profiles"]
                     except Exception:
                         pass
-                current_cfg["buttons"] = recorded
+                if active_profile not in out_cfg["profiles"]:
+                    out_cfg["profiles"][active_profile] = dict(DEFAULT_MAPPINGS.get(active_profile, DEFAULT_MAPPINGS["sony"]))
+                out_cfg["profiles"][active_profile]["buttons"] = recorded
                 with open(mapping_file, "w", encoding="utf-8") as f:
-                    json.dump(current_cfg, f, indent=4)
-                load_mapping()
-                messagebox.showinfo("TetherPad", "Controller mapping saved successfully!")
+                    json.dump(out_cfg, f, indent=4)
+                load_mapping(active_profile)
+                messagebox.showinfo("TetherPad", f"{profile_title} mapping saved successfully!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save mapping: {e}")
             finally:
@@ -213,12 +271,22 @@ def _run_calibration_wizard_gui():
 
         def on_reset_defaults():
             nonlocal recorded
-            recorded = dict(DEFAULT_MAPPING["buttons"])
+            recorded = dict(DEFAULT_MAPPINGS.get(active_profile, DEFAULT_MAPPINGS["sony"])["buttons"])
             try:
+                out_cfg = {"profiles": dict(DEFAULT_MAPPINGS)}
+                if os.path.exists(mapping_file):
+                    try:
+                        with open(mapping_file, "r", encoding="utf-8") as f:
+                            saved = json.load(f)
+                            if "profiles" in saved:
+                                out_cfg["profiles"] = saved["profiles"]
+                    except Exception:
+                        pass
+                out_cfg["profiles"][active_profile] = dict(DEFAULT_MAPPINGS.get(active_profile, DEFAULT_MAPPINGS["sony"]))
                 with open(mapping_file, "w", encoding="utf-8") as f:
-                    json.dump(DEFAULT_MAPPING, f, indent=4)
-                load_mapping()
-                messagebox.showinfo("TetherPad", "Reset to default PS4/PS5 layout complete.")
+                    json.dump(out_cfg, f, indent=4)
+                load_mapping(active_profile)
+                messagebox.showinfo("TetherPad", f"Reset to default {profile_title} layout complete.")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to reset mapping: {e}")
             finally:
@@ -231,19 +299,23 @@ def _run_calibration_wizard_gui():
         skip_btn = tk.Button(btn_frame, text="Skip Button", command=on_skip, bg=btn_bg, fg=fg_color, relief="flat", padx=10, pady=5)
         skip_btn.pack(side="left")
 
-        reset_btn = tk.Button(btn_frame, text="Reset to Defaults", command=on_reset_defaults, bg="#45475a", fg=fg_color, relief="flat", padx=10, pady=5)
+        reset_btn = tk.Button(btn_frame, text="Reset Defaults", command=on_reset_defaults, bg="#45475a", fg=fg_color, relief="flat", padx=10, pady=5)
         reset_btn.pack(side="left", padx=10)
 
         cancel_btn = tk.Button(btn_frame, text="Cancel", command=lambda: (stop_listener.set(), root.destroy()), bg=btn_bg, fg=fg_color, relief="flat", padx=10, pady=5)
         cancel_btn.pack(side="right")
 
         def listen_events():
-            target_node = device_node or find_device_node()
+            target_node = device_node
+            if not target_node:
+                node, _, _ = find_device_node()
+                target_node = node
             if not target_node:
                 root.after(0, lambda: status_lbl.config(text="Waiting for phone & controller connection...", fg="#f9e2af"))
                 while not stop_listener.is_set() and not target_node:
                     time.sleep(1)
-                    target_node = device_node or find_device_node()
+                    node, _, _ = find_device_node()
+                    target_node = node
                 if stop_listener.is_set():
                     return
                 root.after(0, lambda: status_lbl.config(text=f"Listening on {target_node}", fg="#a6e3a1"))
@@ -285,6 +357,110 @@ def _run_calibration_wizard_gui():
         stop_listener.set()
     finally:
         _wizard_running = False
+
+class GamepadBridge:
+    """Wrapper that unifies Virtual DualShock 4 and Virtual Xbox 360 gamepads."""
+    def __init__(self, c_type="sony"):
+        self.c_type = c_type
+        if c_type == "xbox":
+            self.pad = vg.VX360Gamepad()
+            print("[OK] Virtual Xbox 360 controller active on Windows/Steam!")
+        else:
+            self.pad = vg.VDS4Gamepad()
+            print("[OK] Virtual DualShock 4 controller active on Windows/Steam!")
+
+    def press_button(self, btn):
+        if not getattr(self, 'pad', None): return
+        self.pad.press_button(button=btn)
+
+    def release_button(self, btn):
+        if not getattr(self, 'pad', None): return
+        self.pad.release_button(button=btn)
+
+    def press_special(self, btn):
+        if not getattr(self, 'pad', None): return
+        if self.c_type == "sony":
+            self.pad.press_special_button(special_button=btn)
+        else:
+            self.pad.press_button(button=btn)
+
+    def release_special(self, btn):
+        if not getattr(self, 'pad', None): return
+        if self.c_type == "sony":
+            self.pad.release_special_button(special_button=btn)
+        else:
+            self.pad.release_button(button=btn)
+
+    @staticmethod
+    def _to_xinput_axis(val, invert=False):
+        """Maps 0..255 Android HID axis to full -32768..32767 XInput range."""
+        if val >= 128:
+            res = int(((val - 128) / 127.0) * 32767)
+        else:
+            res = int(((val - 128) / 128.0) * 32768)
+        if invert:
+            res = -res
+        return max(-32768, min(32767, res))
+
+    def set_left_stick(self, x_val, y_val):
+        if not getattr(self, 'pad', None): return
+        if self.c_type == "sony":
+            self.pad.left_joystick(x_value=x_val, y_value=y_val)
+        else:
+            x_16 = self._to_xinput_axis(x_val, invert=False)
+            y_16 = self._to_xinput_axis(y_val, invert=True)
+            self.pad.left_joystick(x_value=x_16, y_value=y_16)
+
+    def set_right_stick(self, x_val, y_val):
+        if not getattr(self, 'pad', None): return
+        if self.c_type == "sony":
+            self.pad.right_joystick(x_value=x_val, y_value=y_val)
+        else:
+            x_16 = self._to_xinput_axis(x_val, invert=False)
+            y_16 = self._to_xinput_axis(y_val, invert=True)
+            self.pad.right_joystick(x_value=x_16, y_value=y_16)
+
+    def set_triggers(self, l2_val=None, r2_val=None):
+        if not getattr(self, 'pad', None): return
+        if l2_val is not None:
+            self.pad.left_trigger(value=l2_val)
+        if r2_val is not None:
+            self.pad.right_trigger(value=r2_val)
+
+    def set_dpad(self, dpad_x, dpad_y):
+        if not getattr(self, 'pad', None): return
+        if self.c_type == "sony":
+            if dpad_x == -1 and dpad_y == -1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NORTHWEST
+            elif dpad_x == 1 and dpad_y == -1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NORTHEAST
+            elif dpad_x == -1 and dpad_y == 1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_SOUTHWEST
+            elif dpad_x == 1 and dpad_y == 1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_SOUTHEAST
+            elif dpad_y == -1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NORTH
+            elif dpad_y == 1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_SOUTH
+            elif dpad_x == -1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_WEST
+            elif dpad_x == 1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_EAST
+            else: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NONE
+            self.pad.directional_pad(direction=d)
+        else:
+            self.pad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_UP)
+            self.pad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_DOWN)
+            self.pad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_LEFT)
+            self.pad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_RIGHT)
+            if dpad_y == -1: self.pad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_UP)
+            elif dpad_y == 1: self.pad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_DOWN)
+            if dpad_x == -1: self.pad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_LEFT)
+            elif dpad_x == 1: self.pad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_RIGHT)
+
+    def update(self):
+        if not getattr(self, 'pad', None): return
+        self.pad.update()
+
+    def close(self):
+        try:
+            if hasattr(self, 'pad') and self.pad is not None:
+                del self.pad
+                self.pad = None
+        except Exception:
+            pass
 
 def is_vigembus_installed():
     """Checks if ViGEmBus kernel driver or service is installed on the system."""
@@ -397,65 +573,140 @@ from PIL import Image, ImageDraw
 
 ensure_mapping_config()
 
-def load_mapping():
-    """Loads controller mapping configuration from mapping.json or falls back to DEFAULT_MAPPING."""
-    global BTN_MAP, SPECIAL_BTN_MAP, AXIS_LX, AXIS_LY, AXIS_RX, AXIS_RY, AXIS_L2, AXIS_R2, DPAD_X, DPAD_Y
+def load_mapping(profile_type="sony"):
+    """
+    Loads controller mapping configuration for 'sony' or 'xbox' profile.
+    Supports both multi-profile and legacy single-profile mapping.json.
+    """
+    global BTN_MAP, SPECIAL_BTN_MAP, AXIS_LX, AXIS_LY, AXIS_RX, AXIS_RY, AXIS_L2, AXIS_R2, DPAD_X, DPAD_Y, current_profile_type
+    current_profile_type = profile_type
     ensure_mapping_config()
-    config = DEFAULT_MAPPING
+
+    config = {}
     if os.path.exists(mapping_file):
         try:
             with open(mapping_file, "r", encoding="utf-8") as f:
-                config = json.load(f)
+                raw_cfg = json.load(f)
+                if "profiles" in raw_cfg:
+                    config = raw_cfg["profiles"].get(profile_type, DEFAULT_MAPPINGS.get(profile_type, DEFAULT_MAPPINGS["sony"]))
+                elif "buttons" in raw_cfg and profile_type == "sony":
+                    config = raw_cfg
+                else:
+                    config = DEFAULT_MAPPINGS.get(profile_type, DEFAULT_MAPPINGS["sony"])
         except Exception as e:
             print(f"[!] Error loading mapping.json: {e}")
-            config = DEFAULT_MAPPING
+            config = DEFAULT_MAPPINGS.get(profile_type, DEFAULT_MAPPINGS["sony"])
+    else:
+        config = DEFAULT_MAPPINGS.get(profile_type, DEFAULT_MAPPINGS["sony"])
 
-    b = config.get("buttons", {})
-    a = config.get("axes", {})
+    if profile_type == "xbox":
+        def_btns = DEFAULT_MAPPINGS["xbox"]["buttons"]
+        def_axes = DEFAULT_MAPPINGS["xbox"]["axes"]
+    else:
+        def_btns = DEFAULT_MAPPINGS["sony"]["buttons"]
+        def_axes = DEFAULT_MAPPINGS["sony"]["axes"]
 
-    BTN_MAP = {
-        b.get("CROSS"): vg.DS4_BUTTONS.DS4_BUTTON_CROSS,
-        b.get("CIRCLE"): vg.DS4_BUTTONS.DS4_BUTTON_CIRCLE,
-        b.get("SQUARE"): vg.DS4_BUTTONS.DS4_BUTTON_SQUARE,
-        b.get("TRIANGLE"): vg.DS4_BUTTONS.DS4_BUTTON_TRIANGLE,
-        b.get("L1"): vg.DS4_BUTTONS.DS4_BUTTON_SHOULDER_LEFT,
-        b.get("R1"): vg.DS4_BUTTONS.DS4_BUTTON_SHOULDER_RIGHT,
-        b.get("L2_BTN"): vg.DS4_BUTTONS.DS4_BUTTON_TRIGGER_LEFT,
-        b.get("R2_BTN"): vg.DS4_BUTTONS.DS4_BUTTON_TRIGGER_RIGHT,
-        b.get("SHARE"): vg.DS4_BUTTONS.DS4_BUTTON_SHARE,
-        b.get("OPTIONS"): vg.DS4_BUTTONS.DS4_BUTTON_OPTIONS,
-        b.get("L3"): vg.DS4_BUTTONS.DS4_BUTTON_THUMB_LEFT,
-        b.get("R3"): vg.DS4_BUTTONS.DS4_BUTTON_THUMB_RIGHT,
-    }
-    BTN_MAP = {k: v for k, v in BTN_MAP.items() if k}
+    b = {**def_btns, **config.get("buttons", {})}
+    a = {**def_axes, **config.get("axes", {})}
 
-    SPECIAL_BTN_MAP = {
-        b.get("PS"): vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_PS,
-        b.get("TOUCHPAD"): vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_TOUCHPAD,
-    }
-    SPECIAL_BTN_MAP = {k: v for k, v in SPECIAL_BTN_MAP.items() if k}
+    if profile_type == "xbox":
+        BTN_MAP = {
+            b.get("A"): vg.XUSB_BUTTON.XUSB_GAMEPAD_A,
+            b.get("B"): vg.XUSB_BUTTON.XUSB_GAMEPAD_B,
+            b.get("X"): vg.XUSB_BUTTON.XUSB_GAMEPAD_X,
+            b.get("Y"): vg.XUSB_BUTTON.XUSB_GAMEPAD_Y,
+            b.get("LB"): vg.XUSB_BUTTON.XUSB_GAMEPAD_LEFT_SHOULDER,
+            b.get("RB"): vg.XUSB_BUTTON.XUSB_GAMEPAD_RIGHT_SHOULDER,
+            b.get("BACK"): vg.XUSB_BUTTON.XUSB_GAMEPAD_BACK,
+            b.get("START"): vg.XUSB_BUTTON.XUSB_GAMEPAD_START,
+            b.get("L3"): vg.XUSB_BUTTON.XUSB_GAMEPAD_LEFT_THUMB,
+            b.get("R3"): vg.XUSB_BUTTON.XUSB_GAMEPAD_RIGHT_THUMB,
+        }
+        BTN_MAP = {k: v for k, v in BTN_MAP.items() if k}
+        SPECIAL_BTN_MAP = {
+            b.get("GUIDE"): vg.XUSB_BUTTON.XUSB_GAMEPAD_GUIDE
+        }
+        SPECIAL_BTN_MAP = {k: v for k, v in SPECIAL_BTN_MAP.items() if k}
 
-    AXIS_LX = a.get("LX", {}).get("code")
-    AXIS_LY = a.get("LY", {}).get("code")
-    AXIS_RX = a.get("RX", {}).get("code")
-    AXIS_RY = a.get("RY", {}).get("code")
-    AXIS_L2 = a.get("L2", {}).get("code")
-    AXIS_R2 = a.get("R2", {}).get("code")
-    DPAD_X = a.get("DPAD_X", {}).get("code")
-    DPAD_Y = a.get("DPAD_Y", {}).get("code")
+        AXIS_LX = a.get("LX", {}).get("code")
+        AXIS_LY = a.get("LY", {}).get("code")
+        AXIS_RX = a.get("RX", {}).get("code")
+        AXIS_RY = a.get("RY", {}).get("code")
+        AXIS_L2 = a.get("LT", a.get("L2", {})).get("code")
+        AXIS_R2 = a.get("RT", a.get("R2", {})).get("code")
+        DPAD_X = a.get("DPAD_X", {}).get("code")
+        DPAD_Y = a.get("DPAD_Y", {}).get("code")
+
+    else:
+        BTN_MAP = {
+            b.get("CROSS"): vg.DS4_BUTTONS.DS4_BUTTON_CROSS,
+            b.get("CIRCLE"): vg.DS4_BUTTONS.DS4_BUTTON_CIRCLE,
+            b.get("SQUARE"): vg.DS4_BUTTONS.DS4_BUTTON_SQUARE,
+            b.get("TRIANGLE"): vg.DS4_BUTTONS.DS4_BUTTON_TRIANGLE,
+            b.get("L1"): vg.DS4_BUTTONS.DS4_BUTTON_SHOULDER_LEFT,
+            b.get("R1"): vg.DS4_BUTTONS.DS4_BUTTON_SHOULDER_RIGHT,
+            b.get("L2_BTN"): vg.DS4_BUTTONS.DS4_BUTTON_TRIGGER_LEFT,
+            b.get("R2_BTN"): vg.DS4_BUTTONS.DS4_BUTTON_TRIGGER_RIGHT,
+            b.get("SHARE"): vg.DS4_BUTTONS.DS4_BUTTON_SHARE,
+            b.get("OPTIONS"): vg.DS4_BUTTONS.DS4_BUTTON_OPTIONS,
+            b.get("L3"): vg.DS4_BUTTONS.DS4_BUTTON_THUMB_LEFT,
+            b.get("R3"): vg.DS4_BUTTONS.DS4_BUTTON_THUMB_RIGHT,
+        }
+        BTN_MAP = {k: v for k, v in BTN_MAP.items() if k}
+
+        SPECIAL_BTN_MAP = {
+            b.get("PS"): vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_PS,
+            b.get("TOUCHPAD"): vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_TOUCHPAD,
+        }
+        SPECIAL_BTN_MAP = {k: v for k, v in SPECIAL_BTN_MAP.items() if k}
+
+        AXIS_LX = a.get("LX", {}).get("code")
+        AXIS_LY = a.get("LY", {}).get("code")
+        AXIS_RX = a.get("RX", {}).get("code")
+        AXIS_RY = a.get("RY", {}).get("code")
+        AXIS_L2 = a.get("L2", {}).get("code")
+        AXIS_R2 = a.get("R2", {}).get("code")
+        DPAD_X = a.get("DPAD_X", {}).get("code")
+        DPAD_Y = a.get("DPAD_Y", {}).get("code")
 
 def find_device_node():
+    """
+    Scans adb getevent -i and automatically identifies the controller.
+    Returns (node, profile_type, display_name).
+    """
     try:
         proc = subprocess.run([adb_cmd, "shell", "getevent -i"], capture_output=True, text=True)
-        current_device = None
+        device_entries = []
+        current_entry = {}
         for line in proc.stdout.split('\n'):
+            line_str = line.strip()
             if line.startswith("add device"):
-                current_device = line.split(":")[-1].strip()
-            if any(x in line.upper() for x in ["WIRELESS CONTROLLER", "SONY", "DUALSENSE", "MTK BT HID", "GAMEPAD", "JOYSTICK"]):
-                return current_device
+                if current_entry and "node" in current_entry:
+                    device_entries.append(current_entry)
+                current_node = line.split(":")[-1].strip()
+                current_entry = {"node": current_node, "name": "", "vendor": "", "product": ""}
+            elif line_str.startswith("name:"):
+                current_entry["name"] = line_str.split(":", 1)[-1].strip().strip('"')
+            elif line_str.startswith("vendor"):
+                current_entry["vendor"] = line_str.split()[-1].strip().lower()
+            elif line_str.startswith("product"):
+                current_entry["product"] = line_str.split()[-1].strip().lower()
+
+        if current_entry and "node" in current_entry:
+            device_entries.append(current_entry)
+
+        for dev in device_entries:
+            name_u = dev["name"].upper()
+            vendor = dev["vendor"]
+            if "XBOX" in name_u or vendor == "045e":
+                return dev["node"], "xbox", dev["name"] or "Xbox Controller"
+            if any(k in name_u for k in ["WIRELESS CONTROLLER", "SONY", "DUALSENSE", "PLAYSTATION"]) or vendor == "054c":
+                return dev["node"], "sony", dev["name"] or "PlayStation Controller"
+            if any(k in name_u for k in ["GAMEPAD", "JOYSTICK", "MTK BT HID"]):
+                return dev["node"], "sony", dev["name"] or "Generic Controller"
     except Exception:
         pass
-    return None
+    return None, None, None
 
 # --- Global state ---
 _cleanup_done = False
@@ -599,7 +850,7 @@ def cleanup(reason=""):
     print("  [3] Removing virtual gamepad...")
     try:
         if gamepad is not None:
-            del gamepad
+            gamepad.close()
             gamepad = None
             print("      Virtual gamepad removed from Windows!")
     except Exception as e:
@@ -624,7 +875,7 @@ def run():
             print("  TetherPad - Starting up")
             print("=" * 55)
             
-            print(f"\n[Waiting] Connect your PS5 controller to your phone via Bluetooth...")
+            print(f"\n[Waiting] Connect your controller to your phone via Bluetooth...")
             print(f"           (Ensure the USB cable is connected)\n")
             
             # USB'yi bekle
@@ -632,9 +883,14 @@ def run():
             
             # BT kolu bekle ve otomatik bul
             device_node = None
+            detected_profile = "sony"
+            detected_name = "Controller"
             while True:
-                device_node = find_device_node()
-                if device_node:
+                node, p_type, d_name = find_device_node()
+                if node:
+                    device_node = node
+                    detected_profile = p_type or "sony"
+                    detected_name = d_name or "Controller"
                     break
                 
                 # USB kopup kopmadigini kontrol et
@@ -649,15 +905,15 @@ def run():
                 time.sleep(2)
                 continue
             
-            print(f"\n[OK] Controller found: {device_node}")
+            print(f"\n[OK] Controller found: {device_node} ({detected_name})")
+            print(f"[Profile] Active Controller Profile: {detected_profile.upper()}")
             
             # ADIM 1.5: Cihaz bilgisi tespiti (ekran stratejisi icin)
             detect_device_info()
             
-            # ADIM 2: Sanal gamepad olustur
-            print("\n[OK] Creating virtual PlayStation controller...")
-            gamepad = vg.VDS4Gamepad()
-            print("[OK] Virtual controller active on Windows/Steam!")
+            # ADIM 2: Sanal gamepad olustur (Xbox ise VX360, Sony ise VDS4)
+            print(f"\n[OK] Creating virtual {detected_profile.upper()} controller...")
+            gamepad = GamepadBridge(detected_profile)
             
             # ADIM 3: Ekran kapatici THREAD'i baslat
             print("[OK] Starting screen protector...")
@@ -665,21 +921,22 @@ def run():
             print("[OK] Screen protector active!")
             
             # ADIM 4: getevent dinleyicisi
-            print(f"\\n[OK] {device_node} dinleniyor...\\n")
+            print(f"\n[OK] {device_node} dinleniyor...\n")
             input_process = subprocess.Popen(
                 [adb_cmd, "shell", "-tt", f"getevent {device_node}"],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
             )
             
-            print("Listening for PS5 Controller input... (Ctrl+C to stop completely)")
+            print(f"Listening for {detected_profile.upper()} input... (Ctrl+C to stop completely)")
             print("=> NOTE: Undefined inputs will be ignored.\n")
             
-            load_mapping()
+            load_mapping(detected_profile)
             
             def map_axis(val):
                 return max(0, min(255, val))
             
             sticks = {'lx': 128, 'ly': 128, 'rx': 128, 'ry': 128}
+            dpad_state = {'x': 0, 'y': 0}
             
             if usb_t is None or not usb_t.is_alive():
                 usb_t = threading.Thread(target=usb_watchdog, daemon=True)
@@ -706,47 +963,49 @@ def run():
                     if event_code in BTN_MAP:
                         btn = BTN_MAP[event_code]
                         if event_value == 1:
-                            gamepad.press_button(button=btn)
+                            gamepad.press_button(btn)
                         elif event_value == 0:
-                            gamepad.release_button(button=btn)
+                            gamepad.release_button(btn)
                     elif event_code in SPECIAL_BTN_MAP:
                         btn = SPECIAL_BTN_MAP[event_code]
                         if event_value == 1:
-                            gamepad.press_special_button(special_button=btn)
+                            gamepad.press_special(btn)
                         elif event_value == 0:
-                            gamepad.release_special_button(special_button=btn)
+                            gamepad.release_special(btn)
         
                 elif event_type == '0003':
                     if event_code == AXIS_LX:
-                        sticks['lx'] = event_value
-                        gamepad.left_joystick(x_value=map_axis(sticks['lx']), y_value=map_axis(sticks['ly']))
+                        sticks['lx'] = map_axis(event_value)
+                        gamepad.set_left_stick(sticks['lx'], sticks['ly'])
                     elif event_code == AXIS_LY:
-                        sticks['ly'] = event_value
-                        gamepad.left_joystick(x_value=map_axis(sticks['lx']), y_value=map_axis(sticks['ly']))
+                        sticks['ly'] = map_axis(event_value)
+                        gamepad.set_left_stick(sticks['lx'], sticks['ly'])
                     elif event_code == AXIS_RX:
-                        sticks['rx'] = event_value
-                        gamepad.right_joystick(x_value=map_axis(sticks['rx']), y_value=map_axis(sticks['ry']))
+                        sticks['rx'] = map_axis(event_value)
+                        gamepad.set_right_stick(sticks['rx'], sticks['ry'])
                     elif event_code == AXIS_RY:
-                        sticks['ry'] = event_value
-                        gamepad.right_joystick(x_value=map_axis(sticks['rx']), y_value=map_axis(sticks['ry']))
+                        sticks['ry'] = map_axis(event_value)
+                        gamepad.set_right_stick(sticks['rx'], sticks['ry'])
                     elif event_code == AXIS_L2:
-                        gamepad.left_trigger(value=map_axis(event_value))
+                        gamepad.set_triggers(l2_val=map_axis(event_value))
                     elif event_code == AXIS_R2:
-                        gamepad.right_trigger(value=map_axis(event_value))
+                        gamepad.set_triggers(r2_val=map_axis(event_value))
                     elif event_code == DPAD_X:
-                        if event_value == 0xffffffff or event_value == 0xffff or (event_value & 0x80000000):
-                            gamepad.directional_pad(direction=vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_WEST)
+                        if event_value in (0xffffffff, 0xffff) or (event_value & 0x80000000):
+                            dpad_state['x'] = -1
                         elif event_value == 1:
-                            gamepad.directional_pad(direction=vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_EAST)
+                            dpad_state['x'] = 1
                         else:
-                            gamepad.directional_pad(direction=vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NONE)
+                            dpad_state['x'] = 0
+                        gamepad.set_dpad(dpad_state['x'], dpad_state['y'])
                     elif event_code == DPAD_Y:
-                        if event_value == 0xffffffff or event_value == 0xffff or (event_value & 0x80000000):
-                            gamepad.directional_pad(direction=vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NORTH)
+                        if event_value in (0xffffffff, 0xffff) or (event_value & 0x80000000):
+                            dpad_state['y'] = -1
                         elif event_value == 1:
-                            gamepad.directional_pad(direction=vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_SOUTH)
+                            dpad_state['y'] = 1
                         else:
-                            gamepad.directional_pad(direction=vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NONE)
+                            dpad_state['y'] = 0
+                        gamepad.set_dpad(dpad_state['x'], dpad_state['y'])
         
                 elif event_type == '0000' and event_code == '0000':
                     gamepad.update()

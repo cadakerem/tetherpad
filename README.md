@@ -15,11 +15,15 @@ This project bridges that flawless Bluetooth connection from your Android phone 
 * **Plug & Play (Invisible App):** Automatically installs an invisible, 11KB background app ("BlackHole") to your phone when you start the program.
 * **Battery Saver (BlackHole Mode):** The invisible app creates a pure black overlay on your phone, reduces hardware brightness to 0%, and swallows all controller inputs so your phone doesn't accidentally navigate menus while you're playing.
 * **Auto-Destruct:** The moment you unplug the USB cable or close the bridge, the black screen closes instantly and your phone returns to normal.
+* **Multi-Profile Auto-Detection:** Automatically identifies whether a connected gamepad is a Sony (PlayStation 4 / DualSense / Clone) or Microsoft (Xbox Wireless / 360 / One) controller via hardware vendor IDs and device descriptors.
+* **Native Virtual Controller Emulation:** 
+  - Sony controllers spawn as native **Virtual DualShock 4 (DS4)** gamepads on Windows.
+  - Xbox controllers spawn as native **Virtual Xbox 360 (X360)** gamepads with normalized analog axes (-32768..32767) and native XInput D-Pad buttons.
+* **Auto-Calibration & Custom Mapping Wizard:** Interactive dark-mode Calibration Wizard in the system tray menu (`mapping.json`), letting you rebind buttons and axes per controller profile on the fly.
 * **Broad Compatibility:** Tested on specific legacy devices (KitKat, Nougat); broader OEM testing for modern Android 10+ devices is currently in progress.
 
 ## 🗺️ Roadmap
 * **Bundled ViGEmBus & All-in-One Setup Wizard:** Pre-packaging `ViGEmBus_Setup.exe` into release archives for seamless offline deployment, along with an optional standalone `TetherPad_Setup.exe` that silently installs both TetherPad and ViGEmBus in a single step.
-* **Native Xbox Controller Emulation:** Currently, TetherPad bridges all connected gamepads to Windows as a **Virtual PlayStation 4 (DualShock 4)** controller. While this works flawlessly on Steam and most modern games, native Virtual Xbox 360 Controller emulation (dynamic analog conversion and layout mapping) is planned for a future update.
 * **Broader OEM Testing:** Gathering more community feedback on highly restricted custom Android ROMs.
 
 ## ⚠️ Prerequisites & Warnings
