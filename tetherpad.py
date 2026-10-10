@@ -855,10 +855,10 @@ def _is_stubborn_device():
 # SCREEN GUARD (KARA DELIK) OTOMATIK KURULUM
 # ============================================================
 def setup_screenguard():
-    \"\"\"
+    """
     Kullaniciya hissettirmeden ScreenGuard APK'sini kurar ve Kara Delik ekranini baslatir.
     USB band genisligini yormamak icin agressif power loop'lari yerine bu modern yontem kullanilir.
-    \"\"\"
+    """
     apk_path = os.path.join(get_base_path(), "ScreenGuard.apk")
     if os.path.exists(apk_path):
         print("[+] ScreenGuard (BlackHole) is being prepared...")
@@ -877,7 +877,7 @@ def setup_screenguard():
         print("[-] ScreenGuard.apk not found. Screen protection skipped.")
 
 def teardown_screenguard():
-    \"\"\"Program kapandiginda siyah ekrani kapatir.\"\"\"
+    """Program kapandiginda siyah ekrani kapatir."""
     print("  [4] ScreenGuard is being stopped on the device...")
     # 1. Önce uygulamayı durdur (siyah ekranı kapat)
     subprocess.run(
