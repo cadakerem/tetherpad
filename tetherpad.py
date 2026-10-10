@@ -879,13 +879,16 @@ def setup_screenguard():
         print("[-] ScreenGuard.apk not found. Screen protection skipped.")
 
 def teardown_screenguard():
-    """Program kapandiginda siyah ekrani kapatir."""
-    print("  [4] ScreenGuard is being stopped on the device...")
+    """Program kapandiginda siyah ekrani kapatir ve APK'yi kaldirir."""
+    print("  [4] ScreenGuard stopping and uninstalling...")
     subprocess.run(
         [adb_cmd, "shell", "am", "force-stop", "com.ps5bridge.screenguard"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
-    # UNINSTALL iptal edildi, bir dahaki sefere hizli acilmasi icin telefonda birakiliyor.
+    subprocess.run(
+        [adb_cmd, "uninstall", "com.ps5bridge.screenguard"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
 
 # ============================================================
 # USB WATCHDOG
