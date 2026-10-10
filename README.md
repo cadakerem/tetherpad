@@ -12,9 +12,9 @@ This project bridges that flawless Bluetooth connection from your Android phone 
 * **Silent Background Service:** Runs completely windowless as a System Tray icon. No annoying black command prompts or taskbar clutter.
 * **System Tray Integration:** Access real-time connection logs directly via Notepad, toggle "Start with Windows", or safely quit the application with a simple right-click on the 'T' icon.
 * **Fully Portable (No ADB Setup):** You don't need to download the Android SDK or mess with environment variables. Custom `platform-tools` are bundled in the release zip and ready to go out of the box.
-* **Plug & Play (Invisible App):** Automatically installs an invisible, 11KB background app (`ScreenGuard`) to your phone when you start the program.
+* **Plug & Play (Invisible App):** Automatically installs an invisible ~21KB background app (`ScreenGuard`) to your phone on first use. On subsequent connections, it detects the app is already installed and launches it instantly — no reinstall delay.
 * **Battery Saver (ScreenGuard Mode):** The invisible app creates a pure black overlay on your phone, reduces hardware brightness to 0%, and swallows all controller inputs so your phone doesn't accidentally navigate menus while you're playing.
-* **Auto-Destruct:** The moment you unplug the USB cable or close the bridge, the black screen closes instantly and your phone returns to normal.
+* **Auto-Destruct:** When you quit TetherPad from the tray icon, the black screen closes and the companion app is automatically uninstalled from your phone. If you simply unplug the USB cable, the black screen closes but the app remains on your phone (ready for instant launch next session).
 * **Multi-Profile Auto-Detection:** Automatically identifies whether a connected gamepad is a Sony (PlayStation 4 / DualSense / Clone) or Microsoft (Xbox Wireless / 360 / One) controller via hardware vendor IDs and device descriptors.
 * **Native Virtual Controller Emulation:** 
   - Sony controllers spawn as native **Virtual DualShock 4 (DS4)** gamepads on Windows.
@@ -67,7 +67,7 @@ Instead of relying on root permissions or losing the kernel race-condition again
 ## 🧑‍💻 Developer & Contributions
 Developed by Kerem Barbaros Karnabat ([@cadakerem](https://github.com/cadakerem)).
 
-> **Note on Repository Structure:** The core Windows bridging logic is housed in `tetherpad.py` which gets compiled into a portable executable using PyInstaller (`TetherPad.spec`). The bundled ADB binaries live in the `platform-tools/` directory, while the invisible Android companion app is pre-compiled as `ScreenGuard.apk` (with its source code available in the `ScreenGuard/` folder).
+> **Note on Repository Structure:** The core Windows bridging logic is housed in `tetherpad.py` which gets compiled into a portable executable using `cx_Freeze` (`setup.py`). The bundled ADB binaries live in the `platform-tools/` directory, while the invisible Android companion app is pre-compiled as `ScreenGuard.apk` (with its source code available in the `ScreenGuard/` folder).
 
 Contributions, issues, and feature requests are welcome! Feel free to check the [Issues page](../../issues).
 
