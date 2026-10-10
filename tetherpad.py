@@ -1114,18 +1114,16 @@ def run():
                         gamepad.set_dpad(dpad_state['x'], dpad_state['y'])
                     elif event_code == '0035':
                         touch_state['x'] = event_value
-                        gamepad.set_touchpad(touch_state['is_down'], touch_state['x'], touch_state['y'])
                     elif event_code == '0036':
                         touch_state['y'] = event_value
-                        gamepad.set_touchpad(touch_state['is_down'], touch_state['x'], touch_state['y'])
                     elif event_code == '0039':
                         if event_value == 0xffffffff:
                             touch_state['is_down'] = False
                         else:
                             touch_state['is_down'] = True
-                        gamepad.set_touchpad(touch_state['is_down'], touch_state['x'], touch_state['y'])
         
                 elif event_type == '0000' and event_code == '0000':
+                    gamepad.set_touchpad(touch_state['is_down'], touch_state['x'], touch_state['y'])
                     gamepad.update()
             
             if not stop_event.is_set():
