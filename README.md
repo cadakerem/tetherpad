@@ -12,8 +12,8 @@ This project bridges that flawless Bluetooth connection from your Android phone 
 * **Silent Background Service:** Runs completely windowless as a System Tray icon. No annoying black command prompts or taskbar clutter.
 * **System Tray Integration:** Access real-time connection logs directly via Notepad, toggle "Start with Windows", or safely quit the application with a simple right-click on the 'T' icon.
 * **Fully Portable (No ADB Setup):** You don't need to download the Android SDK or mess with environment variables. Custom `platform-tools` are bundled in the release zip and ready to go out of the box.
-* **Plug & Play (Invisible App):** Automatically installs an invisible, 11KB background app ("BlackHole") to your phone when you start the program.
-* **Battery Saver (BlackHole Mode):** The invisible app creates a pure black overlay on your phone, reduces hardware brightness to 0%, and swallows all controller inputs so your phone doesn't accidentally navigate menus while you're playing.
+* **Plug & Play (Invisible App):** Automatically installs an invisible, 11KB background app (`ScreenGuard`) to your phone when you start the program.
+* **Battery Saver (ScreenGuard Mode):** The invisible app creates a pure black overlay on your phone, reduces hardware brightness to 0%, and swallows all controller inputs so your phone doesn't accidentally navigate menus while you're playing.
 * **Auto-Destruct:** The moment you unplug the USB cable or close the bridge, the black screen closes instantly and your phone returns to normal.
 * **Multi-Profile Auto-Detection:** Automatically identifies whether a connected gamepad is a Sony (PlayStation 4 / DualSense / Clone) or Microsoft (Xbox Wireless / 360 / One) controller via hardware vendor IDs and device descriptors.
 * **Native Virtual Controller Emulation:** 
@@ -26,6 +26,7 @@ This project bridges that flawless Bluetooth connection from your Android phone 
 ## 🗺️ Roadmap
 * **Standalone Installer (`TetherPad_Setup.exe`):** An optional installer that silently deploys TetherPad and its dependencies in a single step.
 * **Broader OEM Testing:** Gathering more community feedback on highly restricted custom Android ROMs.
+* **Visuals & Media:** Add GIFs and screenshots to the README demonstrating the system tray and the `ScreenGuard` app in action.
 
 ## ⚠️ Prerequisites & Warnings
 1. **ViGEmBus Driver (Virtual Controller Emulation):** TetherPad creates a virtual DualShock 4 or Xbox 360 controller on Windows via the industry-standard ViGEmBus driver (depending on your physical controller).
@@ -63,7 +64,7 @@ Instead of relying on root permissions or losing the kernel race-condition again
 3. Connect your Android phone to your PC via a USB cable.
 4. Run `TetherPad.exe` on your PC. 
    *(Note: The app runs in "Windowless" mode. It will instantly hide in your System Tray next to the clock as a 'T' icon.)*
-5. Your phone screen will turn completely black (BlackHole mode active). 
+5. Your phone screen will turn completely black (`ScreenGuard` mode active). 
 6. Start playing your game on Steam/Windows!
 7. **To view logs:** Right-click the 'T' icon in your system tray and select **Show Logs (Notepad)**.
 8. **To stop playing:** Simply unplug the USB cable or right-click the tray icon and click **Quit**.
