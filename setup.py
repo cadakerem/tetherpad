@@ -3,7 +3,7 @@ from cx_Freeze import setup, Executable
 
 build_exe_options = {
     "packages": ["os", "sys", "json", "threading", "subprocess", "time", "winreg", "tkinter", "pystray", "PIL", "vgamepad"],
-    "excludes": ["unittest", "email", "http", "xml", "pydoc"],
+    "excludes": ["unittest", "email", "pydoc"],
 }
 
 base = "Win32GUI" if sys.platform == "win32" else None
