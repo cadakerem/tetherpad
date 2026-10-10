@@ -1,0 +1,7 @@
+LICENSE
+README.md
+setup.py
+TetherPad.egg-info/PKG-INFO
+TetherPad.egg-info/SOURCES.txt
+TetherPad.egg-info/dependency_links.txt
+TetherPad.egg-info/top_level.txt

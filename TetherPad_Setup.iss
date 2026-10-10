@@ -5,7 +5,7 @@
 #endif
 #define MyAppPublisher "Kerem Barbaros Karnabat"
 #define MyAppURL "https://github.com/cadakerem/tetherpad"
-#define MyAppExeName "TetherPad.exe"
+#define MyAppExeName "tetherpad.exe"
 
 [Setup]
 ; Unique application GUID
@@ -36,7 +36,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "startwithwindows"; Description: "Start TetherPad automatically when Windows starts"; GroupDescription: "Startup Options:"; Flags: unchecked
 
 [Files]
-Source: "{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "build\exe.win-amd64-3.11\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "ScreenGuard.apk"; DestDir: "{app}"; Flags: ignoreversion
 Source: "platform-tools\*"; DestDir: "{app}\platform-tools"; Flags: ignoreversion recursesubdirs createallsubdirs
 

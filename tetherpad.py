@@ -43,7 +43,7 @@ MB_TOPMOST = 0x00040000
 IDYES = 6
 
 def get_base_path():
-    if getattr(sys, 'frozen', False):
+    if getattr(sys, 'frozen', False) or hasattr(sys, 'nuitka') or "__compiled__" in globals():
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
 
@@ -1045,7 +1045,7 @@ def run():
 APP_NAME = "TetherPad"
 
 def get_exe_path():
-    if getattr(sys, 'frozen', False):
+    if getattr(sys, 'frozen', False) or hasattr(sys, 'nuitka') or "__compiled__" in globals():
         return sys.executable
     else:
         return os.path.abspath(__file__)
