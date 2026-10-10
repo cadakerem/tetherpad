@@ -1,7 +1,7 @@
 ; Script generated for TetherPad Installer
 #define MyAppName "TetherPad"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.2.2"
+  #define MyAppVersion "1.2.3"
 #endif
 #define MyAppPublisher "Kerem Barbaros Karnabat"
 #define MyAppURL "https://github.com/cadakerem/tetherpad"

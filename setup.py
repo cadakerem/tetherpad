@@ -10,7 +10,7 @@ base = "Win32GUI" if sys.platform == "win32" else None
 
 setup(
     name="TetherPad",
-    version="1.2.2",
+    version="1.2.3",
     description="TetherPad Bridge",
     options={"build_exe": build_exe_options},
     executables=[Executable("tetherpad.py", base=base, icon="icon.ico", target_name="tetherpad.exe")],

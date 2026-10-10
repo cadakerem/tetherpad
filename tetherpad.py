@@ -486,12 +486,12 @@ def is_vigembus_installed():
     sys_driver = os.path.join(sys_root, "System32", "drivers", "ViGEmBus.sys")
     return os.path.exists(sys_driver)
 
-def ensure_vigembus():
+def ensure_vigembus(force=False):
     """
     Ensures the ViGEmBus driver is installed before importing or using vgamepad.
     If missing, prompts the user with a native dialog to automatically download and run the installer.
     """
-    if is_vigembus_installed():
+    if not force and is_vigembus_installed():
         return True
 
     title = "TetherPad - ViGEmBus Driver Required"
@@ -571,13 +571,17 @@ ensure_vigembus()
 try:
     import vgamepad as vg
 except Exception as e:
-    ctypes.windll.user32.MessageBoxW(
-        0,
-        f"Failed to initialize virtual gamepad:\n{e}",
-        "TetherPad - Initialization Error",
-        MB_ICONERROR | MB_TOPMOST
-    )
-    sys.exit(1)
+    if "VIGEM_ERROR_BUS_NOT_FOUND" in str(e):
+        # Driver registry key was found, but bus could not be initialized (likely incomplete removal/install)
+        ensure_vigembus(force=True)
+    else:
+        ctypes.windll.user32.MessageBoxW(
+            0,
+            f"Failed to initialize virtual gamepad:\n{e}",
+            "TetherPad - Initialization Error",
+            MB_ICONERROR | MB_TOPMOST
+        )
+        sys.exit(1)
 
 import pystray
 from PIL import Image, ImageDraw
