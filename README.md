@@ -26,7 +26,6 @@ This project bridges that flawless Bluetooth connection from your Android phone 
 ## 🗺️ Roadmap
 * **Standalone Installer (`TetherPad_Setup.exe`):** An optional installer that silently deploys TetherPad and its dependencies in a single step.
 * **Broader OEM Testing:** Gathering more community feedback on highly restricted custom Android ROMs.
-* **Visuals & Media:** Add GIFs and screenshots to the README demonstrating the system tray and the `ScreenGuard` app in action.
 
 ## ⚠️ Prerequisites & Warnings
 1. **ViGEmBus Driver (Virtual Controller Emulation):** TetherPad creates a virtual DualShock 4 or Xbox 360 controller on Windows via the industry-standard ViGEmBus driver (depending on your physical controller).
