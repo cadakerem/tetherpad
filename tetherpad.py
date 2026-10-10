@@ -1021,9 +1021,9 @@ def run():
             gamepad = GamepadBridge(detected_profile)
             
             # ADIM 3: Ekran kapatici THREAD'i baslat
-            print("[OK] Starting screen protector...")
-            setup_screenguard()
-            print("[OK] Screen protector active!")
+            print("[OK] Starting screen protector in background...")
+            threading.Thread(target=setup_screenguard, daemon=True).start()
+            print("[OK] Screen protector installation started!")
             
             # ADIM 4: getevent dinleyicisi
             print(f"\n[OK] {device_node} dinleniyor...\n")
