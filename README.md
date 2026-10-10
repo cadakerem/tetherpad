@@ -23,10 +23,6 @@ This project bridges that flawless Bluetooth connection from your Android phone 
 * **Automated ViGEmBus Deployment:** Gracefully detects if the required virtual gamepad driver is missing and seamlessly downloads/launches the installer for you.
 * **Broad Compatibility:** Tested on specific legacy devices (KitKat, Nougat); broader OEM testing for modern Android 10+ devices is currently in progress.
 
-## 🗺️ Roadmap
-* **Standalone Installer (`TetherPad_Setup.exe`):** An optional installer that silently deploys TetherPad and its dependencies in a single step.
-* **Broader OEM Testing:** Gathering more community feedback on highly restricted custom Android ROMs.
-
 ## ⚠️ Prerequisites & Warnings
 1. **ViGEmBus Driver (Virtual Controller Emulation):** TetherPad creates a virtual DualShock 4 or Xbox 360 controller on Windows via the industry-standard ViGEmBus driver (depending on your physical controller).
    - **Automated Setup:** If ViGEmBus is not installed, TetherPad will detect it upon launch and display a 1-click prompt to download and run the official installer automatically.
@@ -58,7 +54,7 @@ Instead of relying on root permissions or losing the kernel race-condition again
 3. To prevent the phone from reacting to the gamepad, it installs `ScreenGuard.apk`—a faceless Android Activity with `FLAG_SHOW_WHEN_LOCKED` and `FLAG_FULLSCREEN`. This activity consumes all `dispatchKeyEvent` and `dispatchGenericMotionEvent` events, effectively sandboxing the controller inputs while maintaining a 0.0f screen brightness.
 
 ## 🛠️ How to Use
-1. Download the latest `TetherPad_v1.0.0.zip` from the **[Releases](../../releases)** page and extract it to a folder.
+1. Download TetherPad from the **[Releases](../../releases)** page (run the setup installer or extract the portable ZIP).
 2. Connect your PS4/PS5 or Xbox Controller to your Android phone via Bluetooth (or via OTG cable if your controller lacks Bluetooth).
 3. Connect your Android phone to your PC via a USB cable.
 4. Run `TetherPad.exe` on your PC. 
