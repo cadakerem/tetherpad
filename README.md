@@ -49,6 +49,8 @@ This software uses core Linux kernel commands (`getevent`) to read inputs, makin
 | Xiaomi (MIUI/HyperOS) | Android 10+ | ⏳ Needs testing |
 | Google Pixel (Stock) | Android 13+ | ⏳ Needs testing |
 
+> **Note on Legacy Devices & Next-Gen Controllers:** If you are repurposing an older Android device as your bridge (especially Android 4.x - 7.x), you may experience pairing issues or connection instability with **next-gen controllers (Xbox Series X/S or PS5 DualSense)**. These modern gamepads are optimized for newer Bluetooth protocols natively supported by Android 10+. Conversely, last-gen Bluetooth controllers (like the PS4 DualShock 4) use classic profiles and pair flawlessly even on devices as old as Android 4.
+
 ## 🧑‍💻 Technical Architecture
 Instead of relying on root permissions or losing the kernel race-condition against Android's wake-up triggers, this bridge utilizes a companion APK strategy:
 1. The Python script spawns an `adb shell getevent` listener to stream raw hex inputs.
