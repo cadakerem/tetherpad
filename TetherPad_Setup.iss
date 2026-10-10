@@ -19,6 +19,7 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={pf}\{#MyAppName}
 DisableProgramGroupPage=yes
 LicenseFile=LICENSE
+SetupIconFile=icon.ico
 OutputDir=Output
 OutputBaseFilename=TetherPad_Setup
 Compression=lzma2/ultra64
