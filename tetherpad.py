@@ -855,19 +855,21 @@ def _is_stubborn_device():
 # SCREEN GUARD (KARA DELIK) OTOMATIK KURULUM
 # ============================================================
 def setup_screenguard():
-    """
-    Kullaniciya hissettirmeden ScreenGuard APK'sini kurar ve Kara Delik ekranini baslatir.
-    USB band genisligini yormamak icin agressif power loop'lari yerine bu modern yontem kullanilir.
-    """
     apk_path = os.path.join(get_base_path(), "ScreenGuard.apk")
     if os.path.exists(apk_path):
         print("[+] ScreenGuard (BlackHole) is being prepared...")
-        # Sadece hizli update yap, eskisi gibi uninstall bekleme
-        subprocess.run(
-            [adb_cmd, "install", "-r", "-d", apk_path],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
-        # Siyah ekrani (MainActivity) kilit ekraninin uzerinde baslat
+        
+        # Kurulu olup olmadigini kontrol et
+        check = subprocess.run([adb_cmd, "shell", "pm", "list", "packages", "com.ps5bridge.screenguard"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        if "com.ps5bridge.screenguard" not in check.stdout:
+            print("  [+] Installing TetherPad APK to phone...")
+            subprocess.run(
+                [adb_cmd, "install", "-r", "-d", apk_path],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+        else:
+            print("  [+] APK is already installed, skipping install.")
+            
         subprocess.run(
             [adb_cmd, "shell", "am", "start", "-n", "com.ps5bridge.screenguard/.MainActivity"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
@@ -879,12 +881,11 @@ def setup_screenguard():
 def teardown_screenguard():
     """Program kapandiginda siyah ekrani kapatir."""
     print("  [4] ScreenGuard is being stopped on the device...")
-    # 1. Önce uygulamayı durdur (siyah ekranı kapat)
     subprocess.run(
         [adb_cmd, "shell", "am", "force-stop", "com.ps5bridge.screenguard"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
-    # UNINSTALL kaldirildi, boylece her seferinde silip bastan yukleme derdi bitti.
+    # UNINSTALL iptal edildi, bir dahaki sefere hizli acilmasi icin telefonda birakiliyor.
 
 # ============================================================
 # USB WATCHDOG
