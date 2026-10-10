@@ -1,7 +1,7 @@
 ; Script generated for TetherPad Installer
 #define MyAppName "TetherPad"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.2.3"
+  #define MyAppVersion "1.3.0"
 #endif
 #define MyAppPublisher "Kerem Barbaros Karnabat"
 #define MyAppURL "https://github.com/cadakerem/tetherpad"
@@ -48,4 +48,5 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilen
 Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\icon.ico"; Tasks: startwithwindows
 
 [Run]
+Filename: "{app}\ViGEmBus_Setup.exe"; Description: "Install ViGEmBus Driver (Required for first time users)"; Flags: postinstall waituntilterminated
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
