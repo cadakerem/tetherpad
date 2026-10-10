@@ -158,7 +158,7 @@ def build():
              tmp_apk, "androiddebugkey"])
         shutil.copy(tmp_apk, OUT_APK)
 
-    print(f"\n✅ APK hazır: {OUT_APK}")
+    print(f"\n[+] APK hazir: {OUT_APK}")
     print(f"   Boyut: {os.path.getsize(OUT_APK):,} bytes")
     print(f"\nYükle: adb install -r ScreenGuard.apk")
     print(f"Aç:    adb shell am start -n com.ps5bridge.screenguard/.MainActivity")

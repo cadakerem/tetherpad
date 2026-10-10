@@ -58,6 +58,15 @@ public class MainActivity extends Activity {
                 long duration = (long) (power * 0.5); // max 127ms burst
                 if (duration < 10) duration = 10;
                 
+                // 1) Telefonda titresim (Sinyalin geldigini kanitlamak icin)
+                try {
+                    Vibrator phoneVib = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+                    if (phoneVib != null && phoneVib.hasVibrator()) {
+                        phoneVib.vibrate(duration);
+                    }
+                } catch (Exception e) {}
+
+                // 2) Kolda titresim (Gamepad Vibrator)
                 if (android.os.Build.VERSION.SDK_INT >= 16) {
                     try {
                         InputManager im = (InputManager) getSystemService(Context.INPUT_SERVICE);
