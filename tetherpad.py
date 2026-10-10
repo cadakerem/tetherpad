@@ -378,6 +378,15 @@ class GamepadBridge:
             print("[OK] Virtual Xbox 360 controller active on Windows/Steam!")
         else:
             self.pad = vg.VDS4Gamepad()
+            self.ext_report = MY_DS4_REPORT_EX()
+            self.ext_report.Report.bTouchPacketsN = 1
+            self.ext_report.Report.sCurrentTouch.bIsUpTrackingNum1 = 0x80 # UP by default
+            self.ext_report.Report.sCurrentTouch.bIsUpTrackingNum2 = 0x80
+            self.ext_report.Report.sPreviousTouch[0].bIsUpTrackingNum1 = 0x80
+            self.ext_report.Report.sPreviousTouch[0].bIsUpTrackingNum2 = 0x80
+            self.ext_report.Report.sPreviousTouch[1].bIsUpTrackingNum1 = 0x80
+            self.ext_report.Report.sPreviousTouch[1].bIsUpTrackingNum2 = 0x80
+            self.touch_packet_counter = 0
             print("[OK] Virtual DualShock 4 controller active on Windows/Steam!")
 
     def press_button(self, btn):
@@ -461,9 +470,43 @@ class GamepadBridge:
             if dpad_x == -1: self.pad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_LEFT)
             elif dpad_x == 1: self.pad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_RIGHT)
 
+    def set_touchpad(self, is_down, x, y):
+        if self.c_type != "sony" or not getattr(self, 'pad', None): return
+        
+        # Move current to previous
+        self.ext_report.Report.sPreviousTouch[1] = self.ext_report.Report.sPreviousTouch[0]
+        self.ext_report.Report.sPreviousTouch[0] = self.ext_report.Report.sCurrentTouch
+        
+        # Generate new touch
+        self.touch_packet_counter = (self.touch_packet_counter + 1) & 0xFF
+        self.ext_report.Report.sCurrentTouch.bPacketCounter = self.touch_packet_counter
+        
+        if is_down:
+            # Down (active low, bit 7 is 0)
+            self.ext_report.Report.sCurrentTouch.bIsUpTrackingNum1 = 0x00
+            self.ext_report.Report.sCurrentTouch.bTouchData1[0] = x & 0xFF
+            self.ext_report.Report.sCurrentTouch.bTouchData1[1] = ((x >> 8) & 0x0F) | ((y & 0x0F) << 4)
+            self.ext_report.Report.sCurrentTouch.bTouchData1[2] = (y >> 4) & 0xFF
+        else:
+            # Up (bit 7 is 1)
+            self.ext_report.Report.sCurrentTouch.bIsUpTrackingNum1 = 0x80
+            
     def update(self):
         if not getattr(self, 'pad', None): return
-        self.pad.update()
+        if self.c_type == "sony":
+            import vgamepad.win.vigem_client as vcli
+            import vgamepad.win.vigem_commons as vcom
+            self.ext_report.Report.bThumbLX = self.pad.report.bThumbLX
+            self.ext_report.Report.bThumbLY = self.pad.report.bThumbLY
+            self.ext_report.Report.bThumbRX = self.pad.report.bThumbRX
+            self.ext_report.Report.bThumbRY = self.pad.report.bThumbRY
+            self.ext_report.Report.wButtons = self.pad.report.wButtons
+            self.ext_report.Report.bSpecial = self.pad.report.bSpecial
+            self.ext_report.Report.bTriggerL = self.pad.report.bTriggerL
+            self.ext_report.Report.bTriggerR = self.pad.report.bTriggerR
+            vcli.vigem_target_ds4_update_ex_ptr(self.pad._busp, self.pad._devicep, ctypes.cast(ctypes.pointer(self.ext_report), ctypes.POINTER(vcom.DS4_REPORT_EX)))
+        else:
+            self.pad.update()
 
     def close(self):
         try:
@@ -582,6 +625,40 @@ except Exception as e:
             MB_ICONERROR | MB_TOPMOST
         )
         sys.exit(1)
+
+import ctypes
+from ctypes import c_ubyte, c_ushort, c_short, Structure, Union
+
+class MY_DS4_TOUCH(Structure):
+    _pack_ = 1
+    _fields_ = [
+        ('bPacketCounter', c_ubyte),
+        ('bIsUpTrackingNum1', c_ubyte),
+        ('bTouchData1', c_ubyte * 3),
+        ('bIsUpTrackingNum2', c_ubyte),
+        ('bTouchData2', c_ubyte * 3)
+    ]
+
+class MY_DS4_SUB_REPORT_EX(Structure):
+    _pack_ = 1
+    _fields_ = [
+        ('bThumbLX', c_ubyte), ('bThumbLY', c_ubyte), ('bThumbRX', c_ubyte), ('bThumbRY', c_ubyte),
+        ('wButtons', c_ushort), ('bSpecial', c_ubyte), ('bTriggerL', c_ubyte), ('bTriggerR', c_ubyte),
+        ('wTimestamp', c_ushort), ('bBatteryLvl', c_ubyte),
+        ('wGyroX', c_short), ('wGyroY', c_short), ('wGyroZ', c_short),
+        ('wAccelX', c_short), ('wAccelY', c_short), ('wAccelZ', c_short),
+        ('_bUnknown1', c_ubyte * 5), ('bBatteryLvlSpecial', c_ubyte),
+        ('_bUnknown2', c_ubyte * 2), ('bTouchPacketsN', c_ubyte),
+        ('sCurrentTouch', MY_DS4_TOUCH),
+        ('sPreviousTouch', MY_DS4_TOUCH * 2)
+    ]
+
+class MY_DS4_REPORT_EX(Union):
+    _pack_ = 1
+    _fields_ = [
+        ('Report', MY_DS4_SUB_REPORT_EX),
+        ('ReportBuffer', c_ubyte * 63)
+    ]
 
 import pystray
 from PIL import Image, ImageDraw
@@ -952,6 +1029,7 @@ def run():
             
             sticks = {'lx': 128, 'ly': 128, 'rx': 128, 'ry': 128}
             dpad_state = {'x': 0, 'y': 0}
+            touch_state = {'x': 0, 'y': 0, 'is_down': False}
             
             if usb_t is None or not usb_t.is_alive():
                 usb_t = threading.Thread(target=usb_watchdog, daemon=True)
@@ -1021,6 +1099,18 @@ def run():
                         else:
                             dpad_state['y'] = 0
                         gamepad.set_dpad(dpad_state['x'], dpad_state['y'])
+                    elif event_code == '0035':
+                        touch_state['x'] = event_value
+                        gamepad.set_touchpad(touch_state['is_down'], touch_state['x'], touch_state['y'])
+                    elif event_code == '0036':
+                        touch_state['y'] = event_value
+                        gamepad.set_touchpad(touch_state['is_down'], touch_state['x'], touch_state['y'])
+                    elif event_code == '0039':
+                        if event_value == 0xffffffff:
+                            touch_state['is_down'] = False
+                        else:
+                            touch_state['is_down'] = True
+                        gamepad.set_touchpad(touch_state['is_down'], touch_state['x'], touch_state['y'])
         
                 elif event_type == '0000' and event_code == '0000':
                     gamepad.update()
