@@ -389,6 +389,19 @@ class GamepadBridge:
             self.touch_packet_counter = 0
             print("[OK] Virtual DualShock 4 controller active on Windows/Steam!")
 
+        # Register for rumble events
+        self.pad.register_notification(self._rumble_cb)
+
+    def _rumble_cb(self, client, target, large_motor, small_motor, led_number, user_data):
+        # Fire and forget ADB broadcast
+        try:
+            _orig_popen(
+                [adb_cmd, "shell", "am", "broadcast", "-a", "com.ps5bridge.VIBRATE", "--ei", "l", str(large_motor), "--ei", "r", str(small_motor)],
+                creationflags=CREATE_NO_WINDOW
+            )
+        except Exception:
+            pass
+
     def press_button(self, btn):
         if not getattr(self, 'pad', None): return
         self.pad.press_button(button=btn)

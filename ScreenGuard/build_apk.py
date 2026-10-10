@@ -29,23 +29,28 @@ def find_tool(name):
             versions = sorted(os.listdir(bt), reverse=True)
             for v in versions:
                 t = os.path.join(bt, v, name + (".exe" if sys.platform=="win32" else ""))
+                t_bat = os.path.join(bt, v, name + (".bat" if sys.platform=="win32" else ""))
                 if os.path.isfile(t):
                     return t
+                if os.path.isfile(t_bat):
+                    return t_bat
     return None
 
 def find_android_jar():
     sdk_roots = [
         os.path.join(os.environ.get("LOCALAPPDATA",""), "Android", "Sdk"),
+        os.path.join(os.environ.get("ANDROID_HOME",""), ""),
         r"C:\Android\Sdk",
         r"C:\Users\kbarb\AppData\Local\Android\Sdk",
     ]
     for sdk in sdk_roots:
-        pf = os.path.join(sdk, "platforms")
-        if os.path.isdir(pf):
-            for plat in sorted(os.listdir(pf), reverse=True):
-                jar = os.path.join(pf, plat, "android.jar")
-                if os.path.isfile(jar):
-                    return jar
+        for pf_name in ["platforms", "platform"]:
+            pf = os.path.join(sdk, pf_name)
+            if os.path.isdir(pf):
+                for plat in sorted(os.listdir(pf), reverse=True):
+                    jar = os.path.join(pf, plat, "android.jar")
+                    if os.path.isfile(jar):
+                        return jar
     return None
 
 def run(cmd, **kw):
@@ -58,7 +63,7 @@ def run(cmd, **kw):
 
 def build():
     aapt = find_tool("aapt")
-    dx   = find_tool("dx")
+    d8   = find_tool("d8")
     apksigner = find_tool("apksigner")
     android_jar = find_android_jar()
 
@@ -66,15 +71,15 @@ def build():
         print("[HATA] aapt bulunamadi. Android SDK build-tools kurun.")
         print("  Kurulum: https://developer.android.com/studio#command-line-tools-only")
         sys.exit(1)
-    if not dx:
-        print("[HATA] dx bulunamadi.")
+    if not d8:
+        print("[HATA] d8 bulunamadi.")
         sys.exit(1)
     if not android_jar:
         print("[HATA] android.jar bulunamadi. SDK platforms klasorunu kontrol edin.")
         sys.exit(1)
 
     print(f"aapt: {aapt}")
-    print(f"dx:   {dx}")
+    print(f"d8:   {d8}")
     print(f"jar:  {android_jar}")
 
     src_dir  = os.path.join(SCRIPT_DIR, "src")
@@ -111,7 +116,11 @@ def build():
 
     # 3) DEX olustur
     print("\n[3] DEX olusturuluyor...")
-    run([dx, "--dex", f"--output={os.path.join(dex_dir,'classes.dex')}", cls_dir])
+    class_files = []
+    for r, d, f in os.walk(cls_dir):
+        for file in f:
+            if file.endswith('.class'): class_files.append(os.path.join(r, file))
+    run([d8, "--output", dex_dir] + class_files)
 
     # 4) APK paketleme (resources + manifest)
     print("\n[4] APK paketleniyor...")

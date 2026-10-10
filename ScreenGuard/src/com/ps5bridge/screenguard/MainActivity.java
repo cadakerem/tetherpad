@@ -13,6 +13,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.bluetooth.BluetoothDevice;
+import android.hardware.input.InputManager;
+import android.view.InputDevice;
+import android.os.Vibrator;
 
 /**
  * Kara Delik (Black Hole) Ekrani
@@ -43,6 +46,38 @@ public class MainActivity extends Activity {
         }
     };
 
+    // Bilgisayardan (Python) gelen titresim komutlarini dinler
+    private BroadcastReceiver vibrateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int l = intent.getIntExtra("l", 0);
+            int r = intent.getIntExtra("r", 0);
+            int power = Math.max(l, r);
+            
+            if (power > 0) {
+                long duration = (long) (power * 0.5); // max 127ms burst
+                if (duration < 10) duration = 10;
+                
+                if (android.os.Build.VERSION.SDK_INT >= 16) {
+                    try {
+                        InputManager im = (InputManager) getSystemService(Context.INPUT_SERVICE);
+                        if (im != null) {
+                            for (int id : im.getInputDeviceIds()) {
+                                InputDevice dev = im.getInputDevice(id);
+                                if (dev != null && !dev.isVirtual()) {
+                                    Vibrator v = dev.getVibrator();
+                                    if (v != null && v.hasVibrator()) {
+                                        v.vibrate(duration);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception e) {}
+                }
+            }
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -52,6 +87,9 @@ public class MainActivity extends Activity {
         filter.addAction(Intent.ACTION_POWER_DISCONNECTED);
         filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
         registerReceiver(disconnectReceiver, filter);
+
+        IntentFilter vibFilter = new IntentFilter("com.ps5bridge.VIBRATE");
+        registerReceiver(vibrateReceiver, vibFilter);
 
         // Kilit ekrani uzerinde goster & Tam ekran yap
         getWindow().addFlags(
@@ -75,9 +113,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        try {
-            unregisterReceiver(disconnectReceiver);
-        } catch (Exception e) {}
+        try { unregisterReceiver(disconnectReceiver); } catch (Exception e) {}
+        try { unregisterReceiver(vibrateReceiver); } catch (Exception e) {}
     }
 
     /** Bütün tus basimlarini yutar (PS5 kolunun Android'i kontrol etmesini onler) */
