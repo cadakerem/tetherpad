@@ -11,12 +11,12 @@
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
-        android:label="PS5 KaraDelik"
+        android:label="TetherPad"
         android:allowBackup="false">
 
         <activity
             android:name=".MainActivity"
-            android:label="PS5 KaraDelik"
+            android:label="TetherPad"
             android:exported="true"
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
             android:launchMode="singleTask">
