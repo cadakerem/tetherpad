@@ -855,21 +855,16 @@ def _is_stubborn_device():
 # SCREEN GUARD (KARA DELIK) OTOMATIK KURULUM
 # ============================================================
 def setup_screenguard():
-    """
+    \"\"\"
     Kullaniciya hissettirmeden ScreenGuard APK'sini kurar ve Kara Delik ekranini baslatir.
     USB band genisligini yormamak icin agressif power loop'lari yerine bu modern yontem kullanilir.
-    """
+    \"\"\"
     apk_path = os.path.join(get_base_path(), "ScreenGuard.apk")
     if os.path.exists(apk_path):
         print("[+] ScreenGuard (BlackHole) is being prepared...")
-        # Önceki bozuk/disabled statüleri temizlemek için eski sürümü tamamen sil
+        # Sadece hizli update yap, eskisi gibi uninstall bekleme
         subprocess.run(
-            [adb_cmd, "uninstall", "com.ps5bridge.screenguard"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
-        # Temiz kurulum
-        subprocess.run(
-            [adb_cmd, "install", "-r", apk_path],
+            [adb_cmd, "install", "-r", "-d", apk_path],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
         # Siyah ekrani (MainActivity) kilit ekraninin uzerinde baslat
@@ -882,18 +877,14 @@ def setup_screenguard():
         print("[-] ScreenGuard.apk not found. Screen protection skipped.")
 
 def teardown_screenguard():
-    """Program kapandiginda siyah ekrani kapatir ve APK'yi telefondan tamamen siler."""
-    print("  [4] ScreenGuard is being uninstalled from the device...")
+    \"\"\"Program kapandiginda siyah ekrani kapatir.\"\"\"
+    print("  [4] ScreenGuard is being stopped on the device...")
     # 1. Önce uygulamayı durdur (siyah ekranı kapat)
     subprocess.run(
         [adb_cmd, "shell", "am", "force-stop", "com.ps5bridge.screenguard"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
-    # 2. Uygulamayı telefondan kökten sil (uninstall)
-    subprocess.run(
-        [adb_cmd, "uninstall", "com.ps5bridge.screenguard"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-    )
+    # UNINSTALL kaldirildi, boylece her seferinde silip bastan yukleme derdi bitti.
 
 # ============================================================
 # USB WATCHDOG
