@@ -48,8 +48,19 @@ def get_base_path():
     return os.path.dirname(os.path.abspath(__file__))
 
 BASE_DIR = get_base_path()
+
+def get_data_dir():
+    appdata = os.getenv('LOCALAPPDATA')
+    if appdata:
+        data_dir = os.path.join(appdata, "TetherPad")
+    else:
+        data_dir = BASE_DIR
+    os.makedirs(data_dir, exist_ok=True)
+    return data_dir
+
+DATA_DIR = get_data_dir()
 adb_cmd = os.path.join(BASE_DIR, "platform-tools", "adb.exe")
-mapping_file = os.path.join(BASE_DIR, "mapping.json")
+mapping_file = os.path.join(DATA_DIR, "mapping.json")
 
 DEFAULT_MAPPINGS = {
     "sony": {
@@ -1060,7 +1071,7 @@ def toggle_startup(icon, item):
     except Exception as e:
         print(f"Startup toggle error: {e}")
 
-log_path = os.path.join(os.path.dirname(get_exe_path()), "tetherpad.log")
+log_path = os.path.join(DATA_DIR, "tetherpad.log")
 sys.stdout = open(log_path, "w", encoding="utf-8", buffering=1)
 sys.stderr = sys.stdout
 
