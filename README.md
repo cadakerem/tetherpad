@@ -73,5 +73,8 @@ Developed by Kerem Barbaros Karnabat ([@cadakerem](https://github.com/cadakerem)
 
 Contributions, issues, and feature requests are welcome! Feel free to check the [Issues page](../../issues).
 
-## 📜 License
-This project is licensed under the [MIT License](LICENSE). Commercial distribution, sale, or repackaging for profit is strictly prohibited.
+## 📜 License & Contributions
+This project is licensed under the **[PolyForm Noncommercial License 1.0.0](LICENSE)**.
+- **Free for Personal Use:** You are free to inspect, patch, modify, run, and distribute this software for personal study, research, gaming, and non-commercial purposes.
+- **Commercial Use Prohibited:** Commercial distribution, resale, or repackaging for profit is strictly prohibited. For commercial licensing inquiries, please contact the maintainer.
+- **Contributions (Pull Requests):** External contributions are welcome under the terms specified in [CONTRIBUTING.md](CONTRIBUTING.md). By submitting a pull request, you grant the project maintainer perpetual, royalty-free rights to use and commercially license your contributions.
