@@ -4,7 +4,7 @@ from cx_Freeze import setup, Executable
 build_exe_options = {
     "packages": ["os", "sys", "json", "threading", "subprocess", "time", "winreg", "tkinter", "pystray", "PIL", "vgamepad", "urllib", "http", "ssl", "socket"],
     "excludes": ["unittest", "email", "pydoc"],
-    "include_files": ["ViGEmBus_Setup.exe", "platform-tools/", ("ScreenGuard/ScreenGuard.apk", "ScreenGuard.apk")]
+    "include_files": ["ViGEmBus_Setup.exe", "platform-tools/", ("ScreenGuard/ScreenGuard.apk", "ScreenGuard.apk"), "LICENSE", "THIRD_PARTY_LICENSES.md"]
 }
 
 base = "Win32GUI" if sys.platform == "win32" else None
