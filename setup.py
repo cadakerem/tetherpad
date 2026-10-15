@@ -2,8 +2,15 @@ import sys
 from cx_Freeze import setup, Executable
 
 build_exe_options = {
-    "packages": ["os", "sys", "json", "threading", "subprocess", "time", "winreg", "tkinter", "pystray", "PIL", "vgamepad", "urllib", "http", "ssl", "socket"],
-    "excludes": ["unittest", "email", "pydoc"],
+    "packages": ["os", "sys", "json", "threading", "subprocess", "time", "winreg", "tkinter", "pystray", "PIL", "vgamepad", "urllib", "http", "ssl", "socket", "ctypes"],
+    "excludes": [
+        "unittest", "email", "pydoc", "test",
+        "numpy", "matplotlib", "IPython", "ipykernel", "jedi", "lxml", "trio",
+        "debugpy", "zmq", "tornado", "jupyter_client", "jupyter_core", "_pytest",
+        "pytest", "wheel", "setuptools", "parso", "pygments", "prompt_toolkit",
+        "fontTools", "kiwisolver", "contourpy", "cycler", "dill", "yaml",
+        "sqlite3", "_sqlite3", "curses", "dbm", "multiprocessing"
+    ],
     "include_files": ["ViGEmBus_Setup.exe", "platform-tools/", ("ScreenGuard/ScreenGuard.apk", "ScreenGuard.apk"), "icon.ico", "LICENSE", "THIRD_PARTY_LICENSES.md"]
 }
 
