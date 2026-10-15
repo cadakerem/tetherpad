@@ -319,13 +319,13 @@ def _run_calibration_wizard_gui():
         def listen_events():
             target_node = device_node
             if not target_node:
-                node, _, _ = find_device_node()
+                node, *rest = find_device_node()
                 target_node = node
             if not target_node:
                 root.after(0, lambda: status_lbl.config(text="Waiting for phone & controller connection...", fg="#f9e2af"))
                 while not stop_listener.is_set() and not target_node:
                     time.sleep(1)
-                    node, _, _ = find_device_node()
+                    node, *rest = find_device_node()
                     target_node = node
                 if stop_listener.is_set():
                     return
@@ -372,6 +372,7 @@ def _run_calibration_wizard_gui():
 class GamepadBridge:
     """Wrapper that unifies Virtual DualShock 4 and Virtual Xbox 360 gamepads."""
     def __init__(self, c_type="sony"):
+        self.lock = threading.Lock()
         self.c_type = c_type
         if c_type == "xbox":
             self.pad = vg.VX360Gamepad()
@@ -404,25 +405,29 @@ class GamepadBridge:
 
     def press_button(self, btn):
         if not getattr(self, 'pad', None): return
-        self.pad.press_button(button=btn)
+        with self.lock:
+            self.pad.press_button(button=btn)
 
     def release_button(self, btn):
         if not getattr(self, 'pad', None): return
-        self.pad.release_button(button=btn)
+        with self.lock:
+            self.pad.release_button(button=btn)
 
     def press_special(self, btn):
         if not getattr(self, 'pad', None): return
-        if self.c_type == "sony":
-            self.pad.press_special_button(special_button=btn)
-        else:
-            self.pad.press_button(button=btn)
+        with self.lock:
+            if self.c_type == "sony":
+                self.pad.press_special_button(special_button=btn)
+            else:
+                self.pad.press_button(button=btn)
 
     def release_special(self, btn):
         if not getattr(self, 'pad', None): return
-        if self.c_type == "sony":
-            self.pad.release_special_button(special_button=btn)
-        else:
-            self.pad.release_button(button=btn)
+        with self.lock:
+            if self.c_type == "sony":
+                self.pad.release_special_button(special_button=btn)
+            else:
+                self.pad.release_button(button=btn)
 
     @staticmethod
     def _to_xinput_axis(val, invert=False):
@@ -437,89 +442,94 @@ class GamepadBridge:
 
     def set_left_stick(self, x_val, y_val):
         if not getattr(self, 'pad', None): return
-        if self.c_type == "sony":
-            self.pad.left_joystick(x_value=x_val, y_value=y_val)
-        else:
-            x_16 = self._to_xinput_axis(x_val, invert=False)
-            y_16 = self._to_xinput_axis(y_val, invert=True)
-            self.pad.left_joystick(x_value=x_16, y_value=y_16)
+        with self.lock:
+            if self.c_type == "sony":
+                self.pad.left_joystick(x_value=x_val, y_value=y_val)
+            else:
+                x_16 = self._to_xinput_axis(x_val, invert=False)
+                y_16 = self._to_xinput_axis(y_val, invert=True)
+                self.pad.left_joystick(x_value=x_16, y_value=y_16)
 
     def set_right_stick(self, x_val, y_val):
         if not getattr(self, 'pad', None): return
-        if self.c_type == "sony":
-            self.pad.right_joystick(x_value=x_val, y_value=y_val)
-        else:
-            x_16 = self._to_xinput_axis(x_val, invert=False)
-            y_16 = self._to_xinput_axis(y_val, invert=True)
-            self.pad.right_joystick(x_value=x_16, y_value=y_16)
+        with self.lock:
+            if self.c_type == "sony":
+                self.pad.right_joystick(x_value=x_val, y_value=y_val)
+            else:
+                x_16 = self._to_xinput_axis(x_val, invert=False)
+                y_16 = self._to_xinput_axis(y_val, invert=True)
+                self.pad.right_joystick(x_value=x_16, y_value=y_16)
 
     def set_triggers(self, l2_val=None, r2_val=None):
         if not getattr(self, 'pad', None): return
-        if l2_val is not None:
-            self.pad.left_trigger(value=l2_val)
-        if r2_val is not None:
-            self.pad.right_trigger(value=r2_val)
+        with self.lock:
+            if l2_val is not None:
+                self.pad.left_trigger(value=l2_val)
+            if r2_val is not None:
+                self.pad.right_trigger(value=r2_val)
 
     def set_dpad(self, dpad_x, dpad_y):
         if not getattr(self, 'pad', None): return
-        if self.c_type == "sony":
-            if dpad_x == -1 and dpad_y == -1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NORTHWEST
-            elif dpad_x == 1 and dpad_y == -1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NORTHEAST
-            elif dpad_x == -1 and dpad_y == 1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_SOUTHWEST
-            elif dpad_x == 1 and dpad_y == 1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_SOUTHEAST
-            elif dpad_y == -1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NORTH
-            elif dpad_y == 1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_SOUTH
-            elif dpad_x == -1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_WEST
-            elif dpad_x == 1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_EAST
-            else: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NONE
-            self.pad.directional_pad(direction=d)
-        else:
-            self.pad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_UP)
-            self.pad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_DOWN)
-            self.pad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_LEFT)
-            self.pad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_RIGHT)
-            if dpad_y == -1: self.pad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_UP)
-            elif dpad_y == 1: self.pad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_DOWN)
-            if dpad_x == -1: self.pad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_LEFT)
-            elif dpad_x == 1: self.pad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_RIGHT)
+        with self.lock:
+            if self.c_type == "sony":
+                if dpad_x == -1 and dpad_y == -1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NORTHWEST
+                elif dpad_x == 1 and dpad_y == -1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NORTHEAST
+                elif dpad_x == -1 and dpad_y == 1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_SOUTHWEST
+                elif dpad_x == 1 and dpad_y == 1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_SOUTHEAST
+                elif dpad_y == -1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NORTH
+                elif dpad_y == 1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_SOUTH
+                elif dpad_x == -1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_WEST
+                elif dpad_x == 1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_EAST
+                else: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NONE
+                self.pad.directional_pad(direction=d)
+            else:
+                self.pad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_UP)
+                self.pad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_DOWN)
+                self.pad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_LEFT)
+                self.pad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_RIGHT)
+                if dpad_y == -1: self.pad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_UP)
+                elif dpad_y == 1: self.pad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_DOWN)
+                if dpad_x == -1: self.pad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_LEFT)
+                elif dpad_x == 1: self.pad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_RIGHT)
 
     def set_touchpad(self, is_down, x, y):
         if self.c_type != "sony" or not getattr(self, 'pad', None): return
-        
-        # Move current to previous
-        self.ext_report.Report.sPreviousTouch[1] = self.ext_report.Report.sPreviousTouch[0]
-        self.ext_report.Report.sPreviousTouch[0] = self.ext_report.Report.sCurrentTouch
-        
-        # Generate new touch
-        self.touch_packet_counter = (self.touch_packet_counter + 1) & 0xFF
-        self.ext_report.Report.sCurrentTouch.bPacketCounter = self.touch_packet_counter
-        
-        if is_down:
-            # Down (active low, bit 7 is 0)
-            self.ext_report.Report.sCurrentTouch.bIsUpTrackingNum1 = 0x00
-            self.ext_report.Report.sCurrentTouch.bTouchData1[0] = x & 0xFF
-            self.ext_report.Report.sCurrentTouch.bTouchData1[1] = ((x >> 8) & 0x0F) | ((y & 0x0F) << 4)
-            self.ext_report.Report.sCurrentTouch.bTouchData1[2] = (y >> 4) & 0xFF
-        else:
-            # Up (bit 7 is 1)
-            self.ext_report.Report.sCurrentTouch.bIsUpTrackingNum1 = 0x80
+        with self.lock:
+            # Move current to previous
+            self.ext_report.Report.sPreviousTouch[1] = self.ext_report.Report.sPreviousTouch[0]
+            self.ext_report.Report.sPreviousTouch[0] = self.ext_report.Report.sCurrentTouch
+            
+            # Generate new touch
+            self.touch_packet_counter = (self.touch_packet_counter + 1) & 0xFF
+            self.ext_report.Report.sCurrentTouch.bPacketCounter = self.touch_packet_counter
+            
+            if is_down:
+                # Down (active low, bit 7 is 0)
+                self.ext_report.Report.sCurrentTouch.bIsUpTrackingNum1 = 0x00
+                self.ext_report.Report.sCurrentTouch.bTouchData1[0] = x & 0xFF
+                self.ext_report.Report.sCurrentTouch.bTouchData1[1] = ((x >> 8) & 0x0F) | ((y & 0x0F) << 4)
+                self.ext_report.Report.sCurrentTouch.bTouchData1[2] = (y >> 4) & 0xFF
+            else:
+                # Up (bit 7 is 1)
+                self.ext_report.Report.sCurrentTouch.bIsUpTrackingNum1 = 0x80
             
     def update(self):
         if not getattr(self, 'pad', None): return
-        if self.c_type == "sony":
-            import vgamepad.win.vigem_client as vcli
-            import vgamepad.win.vigem_commons as vcom
-            self.ext_report.Report.bThumbLX = self.pad.report.bThumbLX
-            self.ext_report.Report.bThumbLY = self.pad.report.bThumbLY
-            self.ext_report.Report.bThumbRX = self.pad.report.bThumbRX
-            self.ext_report.Report.bThumbRY = self.pad.report.bThumbRY
-            self.ext_report.Report.wButtons = self.pad.report.wButtons
-            self.ext_report.Report.bSpecial = self.pad.report.bSpecial
-            self.ext_report.Report.bTriggerL = self.pad.report.bTriggerL
-            self.ext_report.Report.bTriggerR = self.pad.report.bTriggerR
-            vcli.vigem_target_ds4_update_ex_ptr(self.pad._busp, self.pad._devicep, ctypes.cast(ctypes.pointer(self.ext_report), ctypes.POINTER(vcom.DS4_REPORT_EX)))
-        else:
-            self.pad.update()
+        with self.lock:
+            if self.c_type == "sony":
+                import vgamepad.win.vigem_client as vcli
+                import vgamepad.win.vigem_commons as vcom
+                self.ext_report.Report.bThumbLX = self.pad.report.bThumbLX
+                self.ext_report.Report.bThumbLY = self.pad.report.bThumbLY
+                self.ext_report.Report.bThumbRX = self.pad.report.bThumbRX
+                self.ext_report.Report.bThumbRY = self.pad.report.bThumbRY
+                self.ext_report.Report.wButtons = self.pad.report.wButtons
+                self.ext_report.Report.bSpecial = self.pad.report.bSpecial
+                self.ext_report.Report.bTriggerL = self.pad.report.bTriggerL
+                self.ext_report.Report.bTriggerR = self.pad.report.bTriggerR
+                vcli.vigem_target_ds4_update_ex_ptr(self.pad._busp, self.pad._devicep, ctypes.cast(ctypes.pointer(self.ext_report), ctypes.POINTER(vcom.DS4_REPORT_EX)))
+            else:
+                self.pad.update()
 
     def close(self):
         try:
@@ -777,7 +787,7 @@ def load_mapping(profile_type="sony"):
 def find_device_node():
     """
     Scans adb getevent -i and automatically identifies the controller.
-    Returns (node, profile_type, display_name).
+    Returns (main_node, profile_type, display_name, touchpad_node).
     """
     try:
         proc = subprocess.run([adb_cmd, "shell", "getevent -i"], capture_output=True, text=True)
@@ -800,18 +810,32 @@ def find_device_node():
         if current_entry and "node" in current_entry:
             device_entries.append(current_entry)
 
+        # 1. Identify companion Touchpad sub-node (Android 12+ hid-playstation split)
+        touchpad_node = None
+        for dev in device_entries:
+            name_u = dev["name"].upper()
+            if "TOUCHPAD" in name_u and (any(k in name_u for k in ["DUALSENSE", "WIRELESS CONTROLLER", "SONY", "PLAYSTATION"]) or vendor == "054c"):
+                touchpad_node = dev["node"]
+                break
+
+        # 2. Identify main controller node, strictly ignoring companion nodes (TOUCHPAD, MOTION, SENSOR)
         for dev in device_entries:
             name_u = dev["name"].upper()
             vendor = dev["vendor"]
+
+            # Skip companion nodes for main button/axis controller selection
+            if any(comp in name_u for comp in ["TOUCHPAD", "MOTION", "SENSOR"]):
+                continue
+
             if "XBOX" in name_u or vendor == "045e":
-                return dev["node"], "xbox", dev["name"] or "Xbox Controller"
+                return dev["node"], "xbox", dev["name"] or "Xbox Controller", None
             if any(k in name_u for k in ["WIRELESS CONTROLLER", "SONY", "DUALSENSE", "PLAYSTATION"]) or vendor == "054c":
-                return dev["node"], "sony", dev["name"] or "PlayStation Controller"
+                return dev["node"], "sony", dev["name"] or "PlayStation Controller", touchpad_node
             if any(k in name_u for k in ["GAMEPAD", "JOYSTICK", "MTK BT HID"]):
-                return dev["node"], "sony", dev["name"] or "Generic Controller"
+                return dev["node"], "sony", dev["name"] or "Generic Controller", None
     except Exception:
         pass
-    return None, None, None
+    return None, None, None, None
 
 # --- Global state ---
 _cleanup_done = False
@@ -819,9 +843,12 @@ _cleanup_lock = threading.Lock()
 stop_event   = threading.Event()
 gamepad      = None
 input_process = None
+touchpad_process = None
+touchpad_t = None
 usb_t = None
 bt_t = None
 device_node = None
+touchpad_node = None
 _device_info = {}  # {'android_ver': int, 'manufacturer': str}
 
 # ============================================================
@@ -863,10 +890,15 @@ def setup_screenguard():
         check = subprocess.run([adb_cmd, "shell", "pm", "list", "packages", "com.ps5bridge.screenguard"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
         if "com.ps5bridge.screenguard" not in check.stdout:
             print("  [+] Installing TetherPad APK to phone...")
-            subprocess.run(
-                [adb_cmd, "install", "-r", "-d", apk_path],
+            res = subprocess.run(
+                [adb_cmd, "install", "-r", "-d", "-g", apk_path],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
+            if res.returncode != 0:
+                subprocess.run(
+                    [adb_cmd, "install", "-r", "-d", apk_path],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
         else:
             print("  [+] APK is already installed, skipping install.")
             
@@ -890,38 +922,84 @@ def teardown_screenguard():
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
 
+
+def _terminate_proc(proc):
+    """Safely terminates a subprocess if still running."""
+    if proc and proc.poll() is None:
+        try:
+            proc.terminate()
+        except Exception:
+            pass
+
+# ============================================================
+# COMPANION TOUCHPAD WORKER (Modern Android 12+ / DualSense)
+# ============================================================
+def touchpad_worker(tp_node, bridge, stop_evt):
+    global touchpad_process
+    print(f"[OK] Companion Touchpad listener started for {tp_node}...")
+    try:
+        touchpad_process = subprocess.Popen(
+            [adb_cmd, "shell", "-tt", f"getevent {tp_node}"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
+        )
+        tp_state = {'x': 0, 'y': 0, 'is_down': False}
+        for line in iter(touchpad_process.stdout.readline, ''):
+            if stop_evt.is_set():
+                break
+            parts = line.strip().split()
+            if len(parts) != 3:
+                continue
+            ev_type, ev_code = parts[0], parts[1]
+            try:
+                ev_val = int(parts[2], 16)
+            except ValueError:
+                continue
+
+            if ev_type == '0003':
+                if ev_code == '0035':
+                    tp_state['x'] = ev_val
+                elif ev_code == '0036':
+                    tp_state['y'] = ev_val
+                elif ev_code == '0039':
+                    if ev_val in (0xffffffff, -1):
+                        tp_state['is_down'] = False
+                    else:
+                        tp_state['is_down'] = True
+            elif ev_type == '0000' and ev_code == '0000':
+                bridge.set_touchpad(tp_state['is_down'], tp_state['x'], tp_state['y'])
+                bridge.update()
+    except Exception as e:
+        print(f"[Touchpad Worker Warning] {e}")
+    finally:
+        _terminate_proc(touchpad_process)
+        touchpad_process = None
+
 # ============================================================
 # USB WATCHDOG
 # ============================================================
 def usb_watchdog():
-    global input_process
+    global input_process, touchpad_process
     time.sleep(2.0)
     subprocess.run([adb_cmd, "wait-for-disconnect"])
     if not stop_event.is_set():
         print("\n[!] USB/ADB connection lost!")
-        if input_process and input_process.poll() is None:
-            try:
-                input_process.terminate()
-            except Exception:
-                pass
+        _terminate_proc(input_process)
+        _terminate_proc(touchpad_process)
         cleanup(reason="USB baglantisi kesildi")
 
 # ============================================================
 # BT WATCHDOG
 # ============================================================
 def bt_watchdog():
-    global input_process, device_node
+    global input_process, touchpad_process, device_node
     time.sleep(3.0)
     cmd = f"while [ -e {device_node} ]; do sleep 1.5; done; echo GONE"
     try:
         proc = subprocess.run([adb_cmd, "shell", cmd], capture_output=True, text=True)
         if not stop_event.is_set() and "GONE" in proc.stdout:
             print("\n[!] Bluetooth connection lost! Controller disconnected.")
-            if input_process and input_process.poll() is None:
-                try:
-                    input_process.terminate()
-                except Exception:
-                    pass
+            _terminate_proc(input_process)
+            _terminate_proc(touchpad_process)
             cleanup(reason="Bluetooth baglantisi koptu")
     except Exception:
         pass
@@ -930,7 +1008,7 @@ def bt_watchdog():
 # TEMIZLIK
 # ============================================================
 def cleanup(reason=""):
-    global _cleanup_done, gamepad, input_process
+    global _cleanup_done, gamepad, input_process, touchpad_process
 
     with _cleanup_lock:
         if _cleanup_done:
@@ -941,11 +1019,8 @@ def cleanup(reason=""):
 
     stop_event.set()
 
-    if input_process and input_process.poll() is None:
-        try:
-            input_process.terminate()
-        except Exception:
-            pass
+    _terminate_proc(input_process)
+    _terminate_proc(touchpad_process)
 
     print("  [3] Removing virtual gamepad...")
     try:
@@ -964,7 +1039,7 @@ def cleanup(reason=""):
 # ANA AKIS
 # ============================================================
 def run():
-    global input_process, gamepad, _cleanup_done, sticks, stop_event, BTN_MAP, SPECIAL_BTN_MAP, AXIS_LX, AXIS_LY, AXIS_RX, AXIS_RY, AXIS_L2, AXIS_R2, DPAD_X, DPAD_Y, usb_t, bt_t, device_node
+    global input_process, touchpad_process, touchpad_t, gamepad, _cleanup_done, sticks, stop_event, BTN_MAP, SPECIAL_BTN_MAP, AXIS_LX, AXIS_LY, AXIS_RX, AXIS_RY, AXIS_L2, AXIS_R2, DPAD_X, DPAD_Y, usb_t, bt_t, device_node, touchpad_node
     
     while True:
         try:
@@ -985,12 +1060,14 @@ def run():
             device_node = None
             detected_profile = "sony"
             detected_name = "Controller"
+            touchpad_node = None
             while True:
-                node, p_type, d_name = find_device_node()
+                node, p_type, d_name, tp_node = find_device_node()
                 if node:
                     device_node = node
                     detected_profile = p_type or "sony"
                     detected_name = d_name or "Controller"
+                    touchpad_node = tp_node
                     break
                 
                 # USB kopup kopmadigini kontrol et
@@ -1026,6 +1103,15 @@ def run():
                 [adb_cmd, "shell", "-tt", f"getevent {device_node}"],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
             )
+            
+            # ADIM 4.5: Companion Touchpad dinleyicisi (Modern Android 12+ / DualSense)
+            if touchpad_node and detected_profile == "sony":
+                touchpad_t = threading.Thread(
+                    target=touchpad_worker,
+                    args=(touchpad_node, gamepad, stop_event),
+                    daemon=True
+                )
+                touchpad_t.start()
             
             print(f"Listening for {detected_profile.upper()} input... (Ctrl+C to stop completely)")
             print("=> NOTE: Undefined inputs will be ignored.\n")
@@ -1118,7 +1204,8 @@ def run():
                             touch_state['is_down'] = True
         
                 elif event_type == '0000' and event_code == '0000':
-                    gamepad.set_touchpad(touch_state['is_down'], touch_state['x'], touch_state['y'])
+                    if not touchpad_node:
+                        gamepad.set_touchpad(touch_state['is_down'], touch_state['x'], touch_state['y'])
                     gamepad.update()
             
             if not stop_event.is_set():

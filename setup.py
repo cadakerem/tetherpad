@@ -4,14 +4,14 @@ from cx_Freeze import setup, Executable
 build_exe_options = {
     "packages": ["os", "sys", "json", "threading", "subprocess", "time", "winreg", "tkinter", "pystray", "PIL", "vgamepad", "urllib", "http", "ssl", "socket"],
     "excludes": ["unittest", "email", "pydoc"],
-    "include_files": ["ViGEmBus_Setup.exe", "platform-tools/", ("ScreenGuard/ScreenGuard.apk", "ScreenGuard.apk"), "LICENSE", "THIRD_PARTY_LICENSES.md"]
+    "include_files": ["ViGEmBus_Setup.exe", "platform-tools/", ("ScreenGuard/ScreenGuard.apk", "ScreenGuard.apk"), "icon.ico", "LICENSE", "THIRD_PARTY_LICENSES.md"]
 }
 
 base = "Win32GUI" if sys.platform == "win32" else None
 
 setup(
     name="TetherPad",
-    version="1.3.0",
+    version="1.4.0",
     description="TetherPad Bridge",
     options={"build_exe": build_exe_options},
     executables=[Executable("tetherpad.py", base=base, icon="icon.ico", target_name="tetherpad.exe")],
