@@ -21,19 +21,20 @@ else:
 
 
 
-import time
-import sys
+import atexit
+import ctypes
+import json
 import os
+import sys
+import tempfile
+import threading
+import time
+import urllib.request
+import webbrowser
 try:
     import winreg
 except ImportError:
     winreg = None
-import ctypes
-import threading
-import json
-import urllib.request
-import tempfile
-import webbrowser
 
 # Win32 MessageBox constants
 MB_OK = 0x00000000
@@ -1078,8 +1079,20 @@ def bt_watchdog():
         pass
 
 # ============================================================
-# TEMIZLIK
+# TEMIZLIK & ADB SUNUCU YONETIMI
 # ============================================================
+def stop_adb_server():
+    """Gracefully terminates the background adb daemon to avoid file locking on Windows."""
+    try:
+        if os.path.exists(adb_cmd):
+            subprocess.run([adb_cmd, "kill-server"], creationflags=CREATE_NO_WINDOW, timeout=3)
+    except Exception as e:
+        print(f"[!] Warning during adb shutdown: {e}")
+
+
+atexit.register(stop_adb_server)
+
+
 def cleanup(reason=""):
     global _cleanup_done, gamepad, input_process, touchpad_process
 
@@ -1103,7 +1116,7 @@ def cleanup(reason=""):
             print("      Virtual gamepad removed from Windows!")
     except Exception as e:
         print(f"      [!] Error removing virtual gamepad: {e}")
-        
+
     teardown_screenguard()
 
     print("\nClean shutdown complete.")
@@ -1287,6 +1300,7 @@ def run():
         except KeyboardInterrupt:
             print("\nUser interrupted via Ctrl+C.")
             cleanup(reason="User Request (Ctrl+C)")
+            stop_adb_server()
             sys.exit(0)
             
         except (OSError, BrokenPipeError, ValueError):
@@ -1345,6 +1359,7 @@ def quit_app(icon, item):
     icon.stop()
     stop_event.set()
     cleanup(reason="User Request (Tray Quit)")
+    stop_adb_server()
     os._exit(0)
 
 def create_image():
