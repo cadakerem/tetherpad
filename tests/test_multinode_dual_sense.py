@@ -232,5 +232,28 @@ add device 1: /dev/input/event4
         # Xbox controller -> stays xbox
         self.assertEqual(tetherpad.resolve_profile("xbox", "Xbox Wireless Controller", None), "xbox")
 
+    @patch("subprocess.run")
+    def test_pipeline_find_device_to_load_mapping(self, mock_run):
+        """End-to-end pipeline test: find_device_node correctly sets up load_mapping axes."""
+        pixel_output = """
+add device 1: /dev/input/event7
+  name:     "DualSense Wireless Controller Touchpad"
+  vendor:   054c
+  product:  0ce6
+add device 2: /dev/input/event9
+  name:     "DualSense Wireless Controller"
+  vendor:   054c
+  product:  0ce6
+"""
+        mock_run.return_value = MagicMock(stdout=pixel_output)
+        import tetherpad
+        _, profile_type, _, _ = tetherpad.find_device_node()
+        self.assertEqual(profile_type, "sony_modern")
+        tetherpad.load_mapping(profile_type)
+        self.assertEqual(tetherpad.AXIS_RX, "0003")
+        self.assertEqual(tetherpad.AXIS_RY, "0004")
+        self.assertEqual(tetherpad.AXIS_L2, "0002")
+        self.assertEqual(tetherpad.AXIS_R2, "0005")
+
 if __name__ == "__main__":
     unittest.main()
