@@ -2,7 +2,13 @@ import sys
 from cx_Freeze import setup, Executable
 
 build_exe_options = {
-    "packages": ["os", "sys", "json", "threading", "subprocess", "time", "winreg", "tkinter", "pystray", "PIL", "vgamepad", "urllib", "http", "ssl", "socket", "ctypes"],
+    "packages": [
+        "os", "sys", "json", "threading", "subprocess", "time", "winreg",
+        "tkinter", "pystray", "PIL", "vgamepad", "urllib", "http", "ssl",
+        "socket", "ctypes",
+        # six and queue are dynamically referenced by pystray._win32 via six.moves.queue
+        "queue", "six",
+    ],
     "excludes": [
         "unittest", "email", "pydoc", "test",
         "numpy", "matplotlib", "IPython", "ipykernel", "jedi", "lxml", "trio",
