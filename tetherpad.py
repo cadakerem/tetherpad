@@ -98,23 +98,23 @@ DEFAULT_MAPPINGS = {
         }
     },
     "sony_modern": {
-        "name": "Sony DualSense (Modern hid-playstation)",
+        "name": "Sony DualShock 4 / DualSense (Modern evdev)",
         "emulation": "ds4",
         "buttons": {
-            "CROSS": "0131",
-            "CIRCLE": "0132",
-            "SQUARE": "0130",
+            "CROSS": "0130",
+            "CIRCLE": "0131",
+            "SQUARE": "0134",
             "TRIANGLE": "0133",
-            "L1": "0134",
-            "R1": "0135",
-            "L2_BTN": "0136",
-            "R2_BTN": "0137",
-            "SHARE": "0138",
-            "OPTIONS": "0139",
-            "L3": "013a",
-            "R3": "013b",
+            "L1": "0136",
+            "R1": "0137",
+            "L2_BTN": "0138",
+            "R2_BTN": "0139",
+            "SHARE": "013a",
+            "OPTIONS": "013b",
+            "L3": "013d",
+            "R3": "013e",
             "PS": "013c",
-            "TOUCHPAD": "013d"
+            "TOUCHPAD": "0110"
         },
         "axes": {
             "LX": {"type": "0003", "code": "0000"},
@@ -159,7 +159,7 @@ DEFAULT_MAPPINGS = {
 DEFAULT_MAPPING = DEFAULT_MAPPINGS["sony"]
 
 def ensure_mapping_config():
-    """Checks if mapping.json exists; if not, automatically generates multi-profile mapping."""
+    """Checks if mapping.json exists; if not or if profiles are outdated, updates mapping."""
     if not os.path.exists(mapping_file):
         try:
             with open(mapping_file, "w", encoding="utf-8") as f:
@@ -167,6 +167,28 @@ def ensure_mapping_config():
             print("[+] Generated multi-profile mapping configuration: mapping.json")
         except Exception as e:
             print(f"[!] Warning: Could not write default mapping.json: {e}")
+    else:
+        try:
+            with open(mapping_file, "r", encoding="utf-8") as f:
+                raw_cfg = json.load(f)
+            updated = False
+            if "profiles" not in raw_cfg:
+                raw_cfg = {"profiles": dict(DEFAULT_MAPPINGS)}
+                updated = True
+            else:
+                for k, v in DEFAULT_MAPPINGS.items():
+                    if k not in raw_cfg["profiles"]:
+                        raw_cfg["profiles"][k] = v
+                        updated = True
+                    elif k == "sony_modern" and raw_cfg["profiles"][k].get("buttons", {}).get("CROSS") != "0130":
+                        raw_cfg["profiles"][k] = v
+                        updated = True
+            if updated:
+                with open(mapping_file, "w", encoding="utf-8") as f:
+                    json.dump(raw_cfg, f, indent=4)
+                print("[+] Synchronized mapping.json with modern profiles.")
+        except Exception as e:
+            print(f"[!] Warning: Could not update mapping.json: {e}")
 
 _wizard_running = False
 current_profile_type = "sony"
@@ -213,6 +235,22 @@ def _run_calibration_wizard_gui():
                 ("L3", "L3 (Left Stick Click)"),
                 ("R3", "R3 (Right Stick Click)"),
                 ("GUIDE", "Xbox Guide Button"),
+            ]
+        elif active_profile == "sony_modern":
+            buttons_to_map = [
+                ("CROSS", "Cross / A (X)"),
+                ("CIRCLE", "Circle / B (O)"),
+                ("SQUARE", "Square / X (□)"),
+                ("TRIANGLE", "Triangle / Y (△)"),
+                ("L1", "L1 (Left Bumper)"),
+                ("R1", "R1 (Right Bumper)"),
+                ("L2_BTN", "L2 (Left Trigger Button)"),
+                ("R2_BTN", "R2 (Right Trigger Button)"),
+                ("SHARE", "Share / Create"),
+                ("OPTIONS", "Options / Start"),
+                ("L3", "L3 (Left Stick Click)"),
+                ("R3", "R3 (Right Stick Click)"),
+                ("PS", "PS Button"),
             ]
         else:
             buttons_to_map = [
@@ -403,12 +441,21 @@ def _run_calibration_wizard_gui():
     finally:
         _wizard_running = False
 
+def send_vibrate_broadcast(l, r, timeout=2):
+    """Sends an ADB broadcast to ScreenGuard to vibrate the controller motors."""
+    return _orig_run(
+        [adb_cmd, "shell", "am", "broadcast", "-a", "com.ps5bridge.VIBRATE", "--ei", "l", str(l), "--ei", "r", str(r)],
+        creationflags=CREATE_NO_WINDOW,
+        timeout=timeout
+    )
+
 class GamepadBridge:
     """Wrapper that unifies Virtual DualShock 4 and Virtual Xbox 360 gamepads."""
-    def __init__(self, c_type="sony"):
+    def __init__(self, c_type="sony", emulation="ds4"):
         self.lock = threading.Lock()
         self.c_type = "xbox" if c_type == "xbox" else "sony"
-        if self.c_type == "xbox":
+        self.emulation = (emulation or ("xbox" if self.c_type == "xbox" else "ds4")).lower()
+        if self.emulation in ("xbox", "xbox360"):
             self.pad = vg.VX360Gamepad()
             print("[OK] Virtual Xbox 360 controller active on Windows/Steam!")
         else:
@@ -424,18 +471,54 @@ class GamepadBridge:
             self.touch_packet_counter = 0
             print("[OK] Virtual DualShock 4 controller active on Windows/Steam!")
 
+        # Asynchronous rumble worker to prevent process spawning storms
+        self._rumble_lock = threading.Lock()
+        self._rumble_state = (0, 0)
+        self._rumble_event = threading.Event()
+        self._stop_rumble = threading.Event()
+        self._rumble_thread = threading.Thread(target=self._rumble_worker, daemon=True)
+        self._rumble_thread.start()
+
         # Register for rumble events
         self.pad.register_notification(self._rumble_cb)
 
     def _rumble_cb(self, client, target, large_motor, small_motor, led_number, user_data):
-        # Fire and forget ADB broadcast
-        try:
-            _orig_popen(
-                [adb_cmd, "shell", "am", "broadcast", "-a", "com.ps5bridge.VIBRATE", "--ei", "l", str(large_motor), "--ei", "r", str(small_motor)],
-                creationflags=CREATE_NO_WINDOW
-            )
-        except Exception:
-            pass
+        with self._rumble_lock:
+            self._rumble_state = (large_motor, small_motor)
+        self._rumble_event.set()
+
+    def _rumble_worker(self):
+        last_sent = (0, 0)
+        while not self._stop_rumble.is_set():
+            if not self._rumble_event.wait(timeout=0.08):
+                continue
+            self._rumble_event.clear()
+
+            with self._rumble_lock:
+                large, small = self._rumble_state
+
+            if (large, small) == last_sent and (large, small) == (0, 0):
+                continue
+            last_sent = (large, small)
+
+            power = max(large, small)
+            if power > 0:
+                # ScreenGuard calculates duration = power * 0.5 ms.
+                # Scale power up to overcome mechanical motor inertia on phone (250ms - 500ms pulse).
+                scaled = int(500 + (power / 255.0) * 500)
+                send_l = scaled if large >= small else int(scaled * (large / max(small, 1)))
+                send_r = scaled if small >= large else int(scaled * (small / max(large, 1)))
+            else:
+                send_l = 0
+                send_r = 0
+
+            try:
+                print(f"[Rumble] ViGEm feedback -> L={large}, R={small} (Phone pulse: L={send_l}, R={send_r})")
+                send_vibrate_broadcast(send_l, send_r, timeout=2)
+            except Exception as e:
+                print(f"[Rumble Warning] {e}")
+
+            time.sleep(0.08)
 
     def press_button(self, btn):
         if not getattr(self, 'pad', None): return
@@ -567,6 +650,9 @@ class GamepadBridge:
 
     def close(self):
         try:
+            if hasattr(self, '_stop_rumble'):
+                self._stop_rumble.set()
+                self._rumble_event.set()
             if hasattr(self, 'pad') and self.pad is not None:
                 del self.pad
                 self.pad = None
@@ -838,22 +924,22 @@ def load_mapping(profile_type="sony"):
         DPAD_X = a.get("DPAD_X", {}).get("code")
         DPAD_Y = a.get("DPAD_Y", {}).get("code")
 
-def resolve_profile(detected_profile, device_name="", touchpad_node=None, product_id=""):
+    return config
+
+def resolve_profile(detected_profile, device_name="", touchpad_node=None, product_id="", android_ver=0):
     """
     Resolves the exact controller profile.
-    Specifically checks whether a Sony controller with a companion touchpad node is a
-    modern DualSense (Product ID 0ce6 / 0df2 or 'DUALSENSE' in name) running under
-    Linux hid-playstation (sony_modern: RX=0003, RY=0004, L2=0002, R2=0005) or a
-    DualShock 4 / legacy gamepad that retains standard Sony HID mapping.
+    For Sony controllers:
+    - If a companion touchpad node is present (Linux hid-sony >=4.10 / hid-playstation multi-node),
+      or running on Android 10+ (modern evdev layout), resolve to 'sony_modern'.
+    - Otherwise (single-node legacy MTK HID on Android 4.4/7.0), retain 'sony' legacy profile.
     """
-    if detected_profile == "sony" and touchpad_node:
-        name_u = (device_name or "").upper()
-        prod = (product_id or "").lower()
-        if "DUALSENSE" in name_u or prod in ("0ce6", "0df2"):
+    if detected_profile == "sony":
+        if touchpad_node or android_ver >= 10:
             return "sony_modern"
     return detected_profile
 
-def find_device_node():
+def find_device_node(android_ver=0):
     """
     Scans adb getevent -i and automatically identifies the controller.
     Returns (main_node, profile_type, display_name, touchpad_node).
@@ -889,6 +975,7 @@ def find_device_node():
                 break
 
         # 2. Identify main controller node, strictly ignoring companion nodes (TOUCHPAD, MOTION, SENSOR)
+        target_ver = android_ver or _device_info.get("android_ver", 0)
         for dev in device_entries:
             name_u = dev["name"].upper()
             vendor = dev.get("vendor", "").lower()
@@ -900,7 +987,7 @@ def find_device_node():
             if "XBOX" in name_u or vendor == "045e":
                 return dev["node"], "xbox", dev["name"] or "Xbox Controller", None
             if any(k in name_u for k in ["WIRELESS CONTROLLER", "SONY", "DUALSENSE", "PLAYSTATION"]) or vendor == "054c":
-                prof = resolve_profile("sony", dev.get("name", ""), touchpad_node, dev.get("product", ""))
+                prof = resolve_profile("sony", dev.get("name", ""), touchpad_node, dev.get("product", ""), target_ver)
                 return dev["node"], prof, dev["name"] or "PlayStation Controller", touchpad_node
             if any(k in name_u for k in ["GAMEPAD", "JOYSTICK", "MTK BT HID"]):
                 return dev["node"], "sony", dev["name"] or "Generic Controller", None
@@ -1038,6 +1125,13 @@ def touchpad_worker(tp_node, bridge, stop_evt):
                         tp_state['is_down'] = False
                     else:
                         tp_state['is_down'] = True
+            elif ev_type == '0001':
+                if ev_code in ('0110', '0145'):
+                    if ev_val == 1:
+                        bridge.press_special(vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_TOUCHPAD)
+                    elif ev_val == 0:
+                        bridge.release_special(vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_TOUCHPAD)
+                    bridge.update()
             elif ev_type == '0000' and ev_code == '0000':
                 bridge.set_touchpad(tp_state['is_down'], tp_state['x'], tp_state['y'])
                 bridge.update()
@@ -1141,6 +1235,7 @@ def run():
             
             # USB'yi bekle
             subprocess.run([adb_cmd, "wait-for-device"], creationflags=CREATE_NO_WINDOW)
+            detect_device_info()
             
             # BT kolu bekle ve otomatik bul
             device_node = None
@@ -1171,12 +1266,13 @@ def run():
             print(f"\n[OK] Controller found: {device_node} ({detected_name})")
             print(f"[Profile] Active Controller Profile: {detected_profile.upper()}")
             
-            # ADIM 1.5: Cihaz bilgisi tespiti (ekran stratejisi icin)
-            detect_device_info()
+            # ADIM 1.5: Mapping ve emulasyon konfigürasyonunu hazırla
+            prof_cfg = load_mapping(detected_profile)
+            emul = (prof_cfg.get("emulation") if prof_cfg else None) or ("xbox" if detected_profile == "xbox" else "ds4")
             
             # ADIM 2: Sanal gamepad olustur (Xbox ise VX360, Sony ise VDS4)
-            print(f"\n[OK] Creating virtual {detected_profile.upper()} controller...")
-            gamepad = GamepadBridge(detected_profile)
+            print(f"\n[OK] Creating virtual {emul.upper()} controller (Profile: {detected_profile.upper()})...")
+            gamepad = GamepadBridge(detected_profile, emulation=emul)
             
             # ADIM 3: Ekran kapatici THREAD'i baslat
             print("[OK] Starting screen protector in background...")
@@ -1201,8 +1297,6 @@ def run():
             
             print(f"Listening for {detected_profile.upper()} input... (Ctrl+C to stop completely)")
             print("=> NOTE: Undefined inputs will be ignored.\n")
-            
-            load_mapping(detected_profile)
             
             def map_axis(val):
                 return max(0, min(255, val))
@@ -1355,6 +1449,17 @@ def open_logs(icon, item):
     except:
         pass
 
+def test_vibration(icon=None, item=None):
+    """Sends a 1-second test vibration broadcast to phone/controller."""
+    def _do_vib():
+        print("[Rumble Test] Triggering 1-second test vibration on controller...")
+        try:
+            send_vibrate_broadcast(2000, 2000, timeout=3)
+            print("[Rumble Test] Vibration signal sent successfully.")
+        except Exception as e:
+            print(f"[Rumble Test Error] {e}")
+    threading.Thread(target=_do_vib, daemon=True).start()
+
 def quit_app(icon, item):
     icon.stop()
     stop_event.set()
@@ -1382,6 +1487,7 @@ if __name__ == '__main__':
         menu = pystray.Menu(
             pystray.MenuItem("Show Logs (Notepad)", open_logs),
             pystray.MenuItem("Calibrate Controller", open_calibration_wizard),
+            pystray.MenuItem("Test Vibration (1s)", test_vibration),
             pystray.MenuItem("Start with Windows", toggle_startup, checked=lambda item: is_startup_enabled()),
             pystray.MenuItem("Quit", quit_app)
         )

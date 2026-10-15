@@ -90,8 +90,8 @@ add device 2: /dev/input/event9
         self.assertEqual(tp_node, "/dev/input/event2")
 
     @patch("subprocess.run")
-    def test_find_device_node_ds4_with_touchpad_retains_sony_legacy(self, mock_run):
-        """DualShock 4 (product 05c4 / Wireless Controller) retains legacy sony profile even if touchpad node is split."""
+    def test_find_device_node_ds4_with_touchpad_resolves_sony_modern(self, mock_run):
+        """DualShock 4 (product 05c4 / Wireless Controller) with companion touchpad resolves to sony_modern."""
         ds4_output = """
 add device 1: /dev/input/event7
   name:     "Wireless Controller Touchpad"
@@ -107,7 +107,7 @@ add device 2: /dev/input/event9
         main_node, p_type, name, tp_node = tetherpad.find_device_node()
 
         self.assertEqual(main_node, "/dev/input/event9")
-        self.assertEqual(p_type, "sony")
+        self.assertEqual(p_type, "sony_modern")
         self.assertEqual(tp_node, "/dev/input/event7")
 
     @patch("subprocess.run")
@@ -216,6 +216,47 @@ add device 1: /dev/input/event4
         self.assertEqual(tetherpad.AXIS_L2, "0003")
         self.assertEqual(tetherpad.AXIS_R2, "0004")
 
+    def test_mapping_sony_modern_buttons(self):
+        """Verify standard Linux evdev keycodes in sony_modern profile."""
+        import tetherpad
+        tetherpad.load_mapping("sony_modern")
+        b = tetherpad.DEFAULT_MAPPINGS["sony_modern"]["buttons"]
+        self.assertEqual(b["CROSS"], "0130")
+        self.assertEqual(b["CIRCLE"], "0131")
+        self.assertEqual(b["SQUARE"], "0134")
+        self.assertEqual(b["TRIANGLE"], "0133")
+        self.assertEqual(b["L1"], "0136")
+        self.assertEqual(b["R1"], "0137")
+        self.assertEqual(b["SHARE"], "013a")
+        self.assertEqual(b["OPTIONS"], "013b")
+        self.assertEqual(b["L3"], "013d")
+        self.assertEqual(b["R3"], "013e")
+        self.assertEqual(b["PS"], "013c")
+        self.assertEqual(b["TOUCHPAD"], "0110")
+
+    @patch("subprocess.Popen")
+    def test_touchpad_worker_physical_click(self, mock_popen):
+        """Verify touchpad_worker translates 0110 (BTN_LEFT) into DS4_SPECIAL_BUTTON_TOUCHPAD."""
+        import tetherpad
+        import vgamepad as vg
+        mock_bridge = MagicMock()
+        stop_evt = threading.Event()
+
+        fake_lines = [
+            "0001 0110 00000001\n", # Press
+            "0000 0000 00000000\n", # Syn
+            "0001 0110 00000000\n", # Release
+            "0000 0000 00000000\n", # Syn
+        ]
+        mock_proc = MagicMock()
+        mock_proc.stdout.readline.side_effect = fake_lines + [""]
+        mock_proc.poll.return_value = 0
+        mock_popen.return_value = mock_proc
+
+        tetherpad.touchpad_worker("/dev/input/event10", mock_bridge, stop_evt)
+        mock_bridge.press_special.assert_called_with(vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_TOUCHPAD)
+        mock_bridge.release_special.assert_called_with(vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_TOUCHPAD)
+
     def test_resolve_profile_matrix(self):
         """Test resolve_profile across DualSense, DualShock 4, legacy, and Xbox."""
         import tetherpad
@@ -225,10 +266,10 @@ add device 1: /dev/input/event4
         self.assertEqual(tetherpad.resolve_profile("sony", "Wireless Controller", "/dev/input/event7", "0ce6"), "sony_modern")
         # DualSense Edge by product ID (0df2)
         self.assertEqual(tetherpad.resolve_profile("sony", "Wireless Controller", "/dev/input/event7", "0df2"), "sony_modern")
-        # DualShock 4 with companion touchpad -> retains sony legacy layout
-        self.assertEqual(tetherpad.resolve_profile("sony", "Wireless Controller", "/dev/input/event7", "05c4"), "sony")
-        # DualSense without touchpad node (single-node legacy Android 4.4/7) -> retains sony legacy layout
-        self.assertEqual(tetherpad.resolve_profile("sony", "DualSense Wireless Controller", None), "sony")
+        # DualShock 4 with companion touchpad -> resolves to sony_modern
+        self.assertEqual(tetherpad.resolve_profile("sony", "Wireless Controller", "/dev/input/event7", "05c4"), "sony_modern")
+        # DualShock 4 / DualSense without touchpad node on legacy Android (<10) -> retains sony legacy layout
+        self.assertEqual(tetherpad.resolve_profile("sony", "DualSense Wireless Controller", None, android_ver=7), "sony")
         # Xbox controller -> stays xbox
         self.assertEqual(tetherpad.resolve_profile("xbox", "Xbox Wireless Controller", None), "xbox")
 

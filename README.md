@@ -42,9 +42,9 @@ This software uses core Linux kernel commands (`getevent`) to read inputs, makin
 
 | Device | Android Version | Status |
 |--------|-----------------|--------|
+| Samsung Galaxy S25 (SM-S731B) | Android 16 | ✅ Working flawlessly (Multi-node evdev + Touchpad click + Rumble) |
 | Sony Xperia E4g (E2003) | Android 4.4.4 (KitKat) | ✅ Working flawlessly (Single-node legacy BT HID) |
 | LG Aristo (MS210) | Android 7.0 (Nougat) | ✅ Working flawlessly (Single-node legacy BT HID) |
-| Samsung (Knox) Devices | Android 10+ | ⏳ Needs testing |
 | Xiaomi (MIUI/HyperOS) | Android 10+ | ⏳ Needs testing |
 
 > **Testing & Verification Transparency:** The v1.4.1 multi-node architecture was designed directly from official Linux kernel `hid-playstation` device tree specifications and verified via mock unit test suites (`tests/test_multinode_dual_sense.py`). While kernel-level topology parsing and thread synchronization are proven, community feedback with real hardware on modern Android 12+ flagships is actively welcomed.
