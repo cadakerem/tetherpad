@@ -16,8 +16,8 @@ This project bridges that flawless Bluetooth connection from your Android phone 
 * **Battery Saver (ScreenGuard Mode):** The invisible app creates a pure black overlay on your phone, reduces hardware brightness to 0%, and swallows all controller inputs so your phone doesn't accidentally navigate menus while you're playing.
 * **Auto-Destruct:** When you quit TetherPad from the tray icon, the black screen closes and the companion app is automatically uninstalled from your phone. If you simply unplug the USB cable, the black screen closes but the app remains on your phone (ready for instant launch next session).
 * **Multi-Profile Auto-Detection:** Automatically identifies whether a connected gamepad is a Sony (PlayStation 4 / DualSense / Clone) or Microsoft (Xbox Wireless / 360 / One) controller via hardware vendor IDs and device descriptors.
-* **DualSense Multi-Node Split (Android 12+ / Linux 5.12+):** Specifically accommodates the official Sony `hid-playstation` kernel driver topology, isolating the main button/analog node from companion touch and motion sub-devices.
-* **Concurrent Virtual Touchpad Streaming (v1.4.0):** Parallel background thread streaming real-time multi-touch coordinates (`ABS_MT_*`) to the Windows virtual DualShock 4 touchpad with zero input interference.
+* **Concurrent Virtual Touchpad Streaming (v1.4.0):** Parallel background thread streaming real-time single-finger touchpad pointer coordinates (`ABS_MT_POSITION_X/Y`, `ABS_MT_TRACKING_ID`) to the Windows virtual DualShock 4 touchpad with zero input interference.
+* **Dual-Topology Axis Resolution:** Automatically switches between modern Linux evdev axes (`sony_modern`: RX=0003, RY=0004, L2=0002, R2=0005) on Android 12+ `hid-playstation` kernels and legacy MTK BT HID axes on older devices (Android 4.4/7.0).
 * **Thread-Safe Input Architecture:** Internal mutex synchronization guarding virtual controller reports against concurrent multi-thread updates.
 * **Native Virtual Controller Emulation:** 
   - Sony controllers spawn as native **Virtual DualShock 4 (DS4)** gamepads on Windows.
@@ -52,12 +52,12 @@ This software uses core Linux kernel commands (`getevent`) to read inputs, makin
 
 > **Note on Legacy Devices & Next-Gen Controllers:** If you are repurposing an older Android device as your bridge (especially Android 4.x - 7.x), you may experience pairing issues or connection instability with **next-gen controllers (Xbox Series X/S or PS5 DualSense)**. These modern gamepads are optimized for newer Bluetooth protocols natively supported by Android 10+. Conversely, last-gen Bluetooth controllers (like the PS4 DualShock 4) use classic profiles and pair flawlessly even on devices as old as Android 4.
 
-> **Note on Replica / Clone Controllers:** TetherPad fully supports reading multi-touch (Touchpad) coordinates and forwarding Force Feedback (Rumble/Vibration). However, Android's Bluetooth HID driver does **not** transmit these specific hardware signals for replica/third-party clone controllers. To utilize the Touchpad and Rumble features wirelessly via TetherPad, a genuine original Sony DualSense or DualShock 4 controller is required.
+> **Note on Replica / Clone Controllers:** TetherPad fully supports reading touchpad coordinates and forwarding Force Feedback (Rumble/Vibration). However, Android's Bluetooth HID driver does **not** transmit these specific hardware signals for replica/third-party clone controllers. To utilize the Touchpad and Rumble features wirelessly via TetherPad, a genuine original Sony DualSense or DualShock 4 controller is required.
 
 ## 🧑‍💻 Technical Architecture
 Instead of relying on root permissions or losing the kernel race-condition against Android's wake-up triggers, this bridge utilizes a companion APK strategy:
 1. The Python script spawns an `adb shell getevent` listener to stream raw hex inputs.
-2. In modern multi-node topologies (Android 12+), it spawns a concurrent companion worker to capture multitouch coordinates without stalling or clobbering main stick/button states.
+2. In modern multi-node topologies (Android 12+), it spawns a concurrent companion worker to capture single-finger touchpad coordinates without stalling or clobbering main stick/button states.
 3. It translates these inputs and emulates them on Windows using `vgamepad` (ViGEmBus).
 4. To prevent the phone from reacting to the gamepad, it installs `ScreenGuard.apk`—a faceless Android Activity with `FLAG_SHOW_WHEN_LOCKED` and `FLAG_FULLSCREEN`. This activity consumes all `dispatchKeyEvent` and `dispatchGenericMotionEvent` events, effectively sandboxing the controller inputs while maintaining a 0.0f screen brightness.
 

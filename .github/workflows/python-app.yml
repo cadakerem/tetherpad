@@ -28,3 +28,7 @@ jobs:
     - name: Verify Python compilation
       run: |
         python -m py_compile tetherpad.py
+
+    - name: Run unit test suite
+      run: |
+        python -m unittest discover -s tests

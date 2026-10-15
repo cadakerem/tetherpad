@@ -24,7 +24,10 @@ else:
 import time
 import sys
 import os
-import winreg
+try:
+    import winreg
+except ImportError:
+    winreg = None
 import ctypes
 import threading
 import json
@@ -89,6 +92,36 @@ DEFAULT_MAPPINGS = {
             "RY": {"type": "0003", "code": "0005"},
             "L2": {"type": "0003", "code": "0003"},
             "R2": {"type": "0003", "code": "0004"},
+            "DPAD_X": {"type": "0003", "code": "0010"},
+            "DPAD_Y": {"type": "0003", "code": "0011"}
+        }
+    },
+    "sony_modern": {
+        "name": "Sony DualSense (Modern hid-playstation)",
+        "emulation": "ds4",
+        "buttons": {
+            "CROSS": "0131",
+            "CIRCLE": "0132",
+            "SQUARE": "0130",
+            "TRIANGLE": "0133",
+            "L1": "0134",
+            "R1": "0135",
+            "L2_BTN": "0136",
+            "R2_BTN": "0137",
+            "SHARE": "0138",
+            "OPTIONS": "0139",
+            "L3": "013a",
+            "R3": "013b",
+            "PS": "013c",
+            "TOUCHPAD": "013d"
+        },
+        "axes": {
+            "LX": {"type": "0003", "code": "0000"},
+            "LY": {"type": "0003", "code": "0001"},
+            "RX": {"type": "0003", "code": "0003"},
+            "RY": {"type": "0003", "code": "0004"},
+            "L2": {"type": "0003", "code": "0002"},
+            "R2": {"type": "0003", "code": "0005"},
             "DPAD_X": {"type": "0003", "code": "0010"},
             "DPAD_Y": {"type": "0003", "code": "0011"}
         }
@@ -373,8 +406,8 @@ class GamepadBridge:
     """Wrapper that unifies Virtual DualShock 4 and Virtual Xbox 360 gamepads."""
     def __init__(self, c_type="sony"):
         self.lock = threading.Lock()
-        self.c_type = c_type
-        if c_type == "xbox":
+        self.c_type = "xbox" if c_type == "xbox" else "sony"
+        if self.c_type == "xbox":
             self.pad = vg.VX360Gamepad()
             print("[OK] Virtual Xbox 360 controller active on Windows/Steam!")
         else:
@@ -541,11 +574,13 @@ class GamepadBridge:
 
 def is_vigembus_installed():
     """Checks if ViGEmBus kernel driver or service is installed on the system."""
+    if not winreg:
+        return False
     try:
         key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Services\ViGEmBus")
         winreg.CloseKey(key)
         return True
-    except OSError:
+    except (OSError, AttributeError):
         pass
 
     sys_root = os.environ.get("SystemRoot", r"C:\Windows")
@@ -632,22 +667,28 @@ def ensure_vigembus(force=False):
         sys.exit(0)
 
 # Check and ensure ViGEmBus driver is present before importing vgamepad
-ensure_vigembus()
+if os.name == "nt":
+    ensure_vigembus()
 
-try:
-    import vgamepad as vg
-except Exception as e:
-    if "VIGEM_ERROR_BUS_NOT_FOUND" in str(e):
-        # Driver registry key was found, but bus could not be initialized (likely incomplete removal/install)
-        ensure_vigembus(force=True)
-    else:
-        ctypes.windll.user32.MessageBoxW(
-            0,
-            f"Failed to initialize virtual gamepad:\n{e}",
-            "TetherPad - Initialization Error",
-            MB_ICONERROR | MB_TOPMOST
-        )
-        sys.exit(1)
+    try:
+        import vgamepad as vg
+    except Exception as e:
+        if "VIGEM_ERROR_BUS_NOT_FOUND" in str(e):
+            # Driver registry key was found, but bus could not be initialized (likely incomplete removal/install)
+            ensure_vigembus(force=True)
+        else:
+            ctypes.windll.user32.MessageBoxW(
+                0,
+                f"Failed to initialize virtual gamepad:\n{e}",
+                "TetherPad - Initialization Error",
+                MB_ICONERROR | MB_TOPMOST
+            )
+            sys.exit(1)
+else:
+    try:
+        import vgamepad as vg
+    except Exception:
+        vg = None
 
 import ctypes
 from ctypes import c_ubyte, c_ushort, c_short, Structure, Union
@@ -717,6 +758,9 @@ def load_mapping(profile_type="sony"):
     if profile_type == "xbox":
         def_btns = DEFAULT_MAPPINGS["xbox"]["buttons"]
         def_axes = DEFAULT_MAPPINGS["xbox"]["axes"]
+    elif profile_type == "sony_modern":
+        def_btns = DEFAULT_MAPPINGS["sony_modern"]["buttons"]
+        def_axes = DEFAULT_MAPPINGS["sony_modern"]["axes"]
     else:
         def_btns = DEFAULT_MAPPINGS["sony"]["buttons"]
         def_axes = DEFAULT_MAPPINGS["sony"]["axes"]
@@ -814,6 +858,7 @@ def find_device_node():
         touchpad_node = None
         for dev in device_entries:
             name_u = dev["name"].upper()
+            vendor = dev.get("vendor", "").lower()
             if "TOUCHPAD" in name_u and (any(k in name_u for k in ["DUALSENSE", "WIRELESS CONTROLLER", "SONY", "PLAYSTATION"]) or vendor == "054c"):
                 touchpad_node = dev["node"]
                 break
@@ -821,7 +866,7 @@ def find_device_node():
         # 2. Identify main controller node, strictly ignoring companion nodes (TOUCHPAD, MOTION, SENSOR)
         for dev in device_entries:
             name_u = dev["name"].upper()
-            vendor = dev["vendor"]
+            vendor = dev.get("vendor", "").lower()
 
             # Skip companion nodes for main button/axis controller selection
             if any(comp in name_u for comp in ["TOUCHPAD", "MOTION", "SENSOR"]):
@@ -937,13 +982,15 @@ def _terminate_proc(proc):
 def touchpad_worker(tp_node, bridge, stop_evt):
     global touchpad_process
     print(f"[OK] Companion Touchpad listener started for {tp_node}...")
+    local_proc = None
     try:
-        touchpad_process = subprocess.Popen(
+        local_proc = subprocess.Popen(
             [adb_cmd, "shell", "-tt", f"getevent {tp_node}"],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
         )
+        touchpad_process = local_proc
         tp_state = {'x': 0, 'y': 0, 'is_down': False}
-        for line in iter(touchpad_process.stdout.readline, ''):
+        for line in iter(local_proc.stdout.readline, ''):
             if stop_evt.is_set():
                 break
             parts = line.strip().split()
@@ -971,8 +1018,9 @@ def touchpad_worker(tp_node, bridge, stop_evt):
     except Exception as e:
         print(f"[Touchpad Worker Warning] {e}")
     finally:
-        _terminate_proc(touchpad_process)
-        touchpad_process = None
+        _terminate_proc(local_proc)
+        if touchpad_process == local_proc:
+            touchpad_process = None
 
 # ============================================================
 # USB WATCHDOG
@@ -1113,10 +1161,11 @@ def run():
                 )
                 touchpad_t.start()
             
-            print(f"Listening for {detected_profile.upper()} input... (Ctrl+C to stop completely)")
+            active_profile = "sony_modern" if (touchpad_node and detected_profile == "sony") else detected_profile
+            print(f"Listening for {active_profile.upper()} input... (Ctrl+C to stop completely)")
             print("=> NOTE: Undefined inputs will be ignored.\n")
             
-            load_mapping(detected_profile)
+            load_mapping(active_profile)
             
             def map_axis(val):
                 return max(0, min(255, val))

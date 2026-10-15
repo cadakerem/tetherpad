@@ -44,6 +44,52 @@ add device 4: /dev/input/event9
         self.assertEqual(tp_node, "/dev/input/event7")
 
     @patch("subprocess.run")
+    def test_find_device_node_synaptics_touchpad_before_controller(self, mock_run):
+        """Regression test: non-Sony touchpad before controller must not raise UnboundLocalError."""
+        output = """
+add device 1: /dev/input/event0
+  name:     "synaptics_touchpad"
+  vendor:   06cb
+  product:  0000
+add device 2: /dev/input/event7
+  name:     "DualSense Wireless Controller Touchpad"
+  vendor:   054c
+  product:  0ce6
+add device 3: /dev/input/event9
+  name:     "DualSense Wireless Controller"
+  vendor:   054c
+  product:  0ce6
+"""
+        mock_run.return_value = MagicMock(stdout=output)
+        import tetherpad
+        main_node, p_type, name, tp_node = tetherpad.find_device_node()
+
+        self.assertEqual(main_node, "/dev/input/event9")
+        self.assertEqual(p_type, "sony")
+        self.assertEqual(tp_node, "/dev/input/event7")
+
+    @patch("subprocess.run")
+    def test_find_device_node_generic_touchpad_name_with_sony_vendor(self, mock_run):
+        """Regression test: device named simply 'Touchpad' with vendor 054c matches companion."""
+        output = """
+add device 1: /dev/input/event2
+  name:     "Touchpad"
+  vendor:   054c
+  product:  0ce6
+add device 2: /dev/input/event9
+  name:     "DualSense Wireless Controller"
+  vendor:   054c
+  product:  0ce6
+"""
+        mock_run.return_value = MagicMock(stdout=output)
+        import tetherpad
+        main_node, p_type, name, tp_node = tetherpad.find_device_node()
+
+        self.assertEqual(main_node, "/dev/input/event9")
+        self.assertEqual(p_type, "sony")
+        self.assertEqual(tp_node, "/dev/input/event2")
+
+    @patch("subprocess.run")
     def test_find_device_node_legacy_android(self, mock_run):
         """Simulate legacy Android 4.4 / 7 (MTK BT HID single node)."""
         legacy_output = """
@@ -96,9 +142,9 @@ add device 1: /dev/input/event4
     def test_gamepad_bridge_thread_safety(self):
         """Verify GamepadBridge handles concurrent button and touchpad updates without races."""
         import tetherpad
-        with patch.object(tetherpad.vg, "VDS4Gamepad") as mock_vds4:
+        with patch.object(tetherpad, "vg") as mock_vg:
             mock_pad = MagicMock()
-            mock_vds4.return_value = mock_pad
+            mock_vg.VDS4Gamepad.return_value = mock_pad
             bridge = tetherpad.GamepadBridge("sony")
             self.assertTrue(hasattr(bridge, "lock"))
 
@@ -130,6 +176,24 @@ add device 1: /dev/input/event4
             for t in threads: t.join()
 
             self.assertEqual(len(errors), 0)
+
+    def test_mapping_sony_modern_evdev_axes(self):
+        """Verify modern hid-playstation profile maps right stick and triggers according to Linux evdev."""
+        import tetherpad
+        tetherpad.load_mapping("sony_modern")
+        self.assertEqual(tetherpad.AXIS_RX, "0003")
+        self.assertEqual(tetherpad.AXIS_RY, "0004")
+        self.assertEqual(tetherpad.AXIS_L2, "0002")
+        self.assertEqual(tetherpad.AXIS_R2, "0005")
+
+    def test_mapping_sony_legacy_axes(self):
+        """Verify legacy Sony profile retains MTK BT HID quirks for Android 4.4/7.0."""
+        import tetherpad
+        tetherpad.load_mapping("sony")
+        self.assertEqual(tetherpad.AXIS_RX, "0002")
+        self.assertEqual(tetherpad.AXIS_RY, "0005")
+        self.assertEqual(tetherpad.AXIS_L2, "0003")
+        self.assertEqual(tetherpad.AXIS_R2, "0004")
 
 if __name__ == "__main__":
     unittest.main()
