@@ -257,6 +257,28 @@ add device 1: /dev/input/event4
         mock_bridge.press_special.assert_called_with(vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_TOUCHPAD)
         mock_bridge.release_special.assert_called_with(vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_TOUCHPAD)
 
+    @patch("subprocess.Popen")
+    def test_touchpad_worker_ignores_tool_finger(self, mock_popen):
+        """Verify touchpad_worker ignores 0145 (BTN_TOOL_FINGER) so finger touch does not cause button click."""
+        import tetherpad
+        mock_bridge = MagicMock()
+        stop_evt = threading.Event()
+
+        fake_lines = [
+            "0001 0145 00000001\n", # Finger touch
+            "0000 0000 00000000\n",
+            "0001 0145 00000000\n", # Finger release
+            "0000 0000 00000000\n",
+        ]
+        mock_proc = MagicMock()
+        mock_proc.stdout.readline.side_effect = fake_lines + [""]
+        mock_proc.poll.return_value = 0
+        mock_popen.return_value = mock_proc
+
+        tetherpad.touchpad_worker("/dev/input/event10", mock_bridge, stop_evt)
+        mock_bridge.press_special.assert_not_called()
+        mock_bridge.release_special.assert_not_called()
+
     def test_resolve_profile_matrix(self):
         """Test resolve_profile across DualSense, DualShock 4, legacy, and Xbox."""
         import tetherpad

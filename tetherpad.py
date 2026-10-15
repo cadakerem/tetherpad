@@ -441,10 +441,10 @@ def _run_calibration_wizard_gui():
     finally:
         _wizard_running = False
 
-def send_vibrate_broadcast(l, r, timeout=2):
+def send_vibrate_broadcast(left, right, timeout=2):
     """Sends an ADB broadcast to ScreenGuard to vibrate the controller motors."""
     return _orig_run(
-        [adb_cmd, "shell", "am", "broadcast", "-a", "com.ps5bridge.VIBRATE", "--ei", "l", str(l), "--ei", "r", str(r)],
+        [adb_cmd, "shell", "am", "broadcast", "-a", "com.ps5bridge.VIBRATE", "--ei", "l", str(left), "--ei", "r", str(right)],
         creationflags=CREATE_NO_WINDOW,
         timeout=timeout
     )
@@ -490,35 +490,39 @@ class GamepadBridge:
     def _rumble_worker(self):
         last_sent = (0, 0)
         while not self._stop_rumble.is_set():
-            if not self._rumble_event.wait(timeout=0.08):
-                continue
+            # Wait up to 0.2s for incoming rumble event or refresh cycle
+            self._rumble_event.wait(timeout=0.2)
             self._rumble_event.clear()
+
+            if self._stop_rumble.is_set():
+                break
 
             with self._rumble_lock:
                 large, small = self._rumble_state
 
-            if (large, small) == last_sent and (large, small) == (0, 0):
+            if (large, small) == (0, 0):
+                if last_sent != (0, 0):
+                    last_sent = (0, 0)
+                    try:
+                        send_vibrate_broadcast(0, 0, timeout=1)
+                    except Exception as e:
+                        print(f"[Rumble Warning] {e}")
                 continue
-            last_sent = (large, small)
 
+            last_sent = (large, small)
             power = max(large, small)
-            if power > 0:
-                # ScreenGuard calculates duration = power * 0.5 ms.
-                # Scale power up to overcome mechanical motor inertia on phone (250ms - 500ms pulse).
-                scaled = int(500 + (power / 255.0) * 500)
-                send_l = scaled if large >= small else int(scaled * (large / max(small, 1)))
-                send_r = scaled if small >= large else int(scaled * (small / max(large, 1)))
-            else:
-                send_l = 0
-                send_r = 0
+            # ScreenGuard calculates duration = power * 0.5 ms.
+            # Scale power so duration is between 200ms - 500ms (overcomes ERM motor inertia).
+            # Refreshing every 0.2s maintains continuous, uninterrupted sustained rumble.
+            scaled = int(400 + (power / 255.0) * 600)
+            send_l = scaled if large >= small else int(scaled * (large / max(small, 1)))
+            send_r = scaled if small >= large else int(scaled * (small / max(large, 1)))
 
             try:
                 print(f"[Rumble] ViGEm feedback -> L={large}, R={small} (Phone pulse: L={send_l}, R={send_r})")
-                send_vibrate_broadcast(send_l, send_r, timeout=2)
+                send_vibrate_broadcast(send_l, send_r, timeout=1)
             except Exception as e:
                 print(f"[Rumble Warning] {e}")
-
-            time.sleep(0.08)
 
     def press_button(self, btn):
         if not getattr(self, 'pad', None): return
@@ -533,7 +537,7 @@ class GamepadBridge:
     def press_special(self, btn):
         if not getattr(self, 'pad', None): return
         with self.lock:
-            if self.c_type == "sony":
+            if self.emulation == "ds4":
                 self.pad.press_special_button(special_button=btn)
             else:
                 self.pad.press_button(button=btn)
@@ -541,7 +545,7 @@ class GamepadBridge:
     def release_special(self, btn):
         if not getattr(self, 'pad', None): return
         with self.lock:
-            if self.c_type == "sony":
+            if self.emulation == "ds4":
                 self.pad.release_special_button(special_button=btn)
             else:
                 self.pad.release_button(button=btn)
@@ -560,7 +564,7 @@ class GamepadBridge:
     def set_left_stick(self, x_val, y_val):
         if not getattr(self, 'pad', None): return
         with self.lock:
-            if self.c_type == "sony":
+            if self.emulation == "ds4":
                 self.pad.left_joystick(x_value=x_val, y_value=y_val)
             else:
                 x_16 = self._to_xinput_axis(x_val, invert=False)
@@ -570,7 +574,7 @@ class GamepadBridge:
     def set_right_stick(self, x_val, y_val):
         if not getattr(self, 'pad', None): return
         with self.lock:
-            if self.c_type == "sony":
+            if self.emulation == "ds4":
                 self.pad.right_joystick(x_value=x_val, y_value=y_val)
             else:
                 x_16 = self._to_xinput_axis(x_val, invert=False)
@@ -588,7 +592,7 @@ class GamepadBridge:
     def set_dpad(self, dpad_x, dpad_y):
         if not getattr(self, 'pad', None): return
         with self.lock:
-            if self.c_type == "sony":
+            if self.emulation == "ds4":
                 if dpad_x == -1 and dpad_y == -1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NORTHWEST
                 elif dpad_x == 1 and dpad_y == -1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_NORTHEAST
                 elif dpad_x == -1 and dpad_y == 1: d = vg.DS4_DPAD_DIRECTIONS.DS4_BUTTON_DPAD_SOUTHWEST
@@ -610,7 +614,7 @@ class GamepadBridge:
                 elif dpad_x == 1: self.pad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_RIGHT)
 
     def set_touchpad(self, is_down, x, y):
-        if self.c_type != "sony" or not getattr(self, 'pad', None): return
+        if self.emulation != "ds4" or not getattr(self, 'pad', None): return
         with self.lock:
             # Move current to previous
             self.ext_report.Report.sPreviousTouch[1] = self.ext_report.Report.sPreviousTouch[0]
@@ -633,7 +637,7 @@ class GamepadBridge:
     def update(self):
         if not getattr(self, 'pad', None): return
         with self.lock:
-            if self.c_type == "sony":
+            if self.emulation == "ds4":
                 import vgamepad.win.vigem_client as vcli
                 import vgamepad.win.vigem_commons as vcom
                 self.ext_report.Report.bThumbLX = self.pad.report.bThumbLX
@@ -1127,7 +1131,7 @@ def touchpad_worker(tp_node, bridge, stop_evt):
                     else:
                         tp_state['is_down'] = True
             elif ev_type == '0001':
-                if ev_code in ('0110', '0145'):
+                if ev_code == '0110':
                     if ev_val == 1:
                         bridge.press_special(vg.DS4_SPECIAL_BUTTONS.DS4_SPECIAL_BUTTON_TOUCHPAD)
                     elif ev_val == 0:
