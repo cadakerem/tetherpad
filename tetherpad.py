@@ -724,8 +724,13 @@ class MY_DS4_REPORT_EX(Union):
         ('ReportBuffer', c_ubyte * 63)
     ]
 
-import pystray
-from PIL import Image, ImageDraw
+try:
+    import pystray
+    from PIL import Image, ImageDraw
+except Exception:
+    pystray = None
+    Image = None
+    ImageDraw = None
 
 ensure_mapping_config()
 
@@ -1338,13 +1343,15 @@ if __name__ == '__main__':
     worker = threading.Thread(target=run, daemon=True)
     worker.start()
     
-    # Create the tray menu
-    menu = pystray.Menu(
-        pystray.MenuItem("Show Logs (Notepad)", open_logs),
-        pystray.MenuItem("Calibrate Controller", open_calibration_wizard),
-        pystray.MenuItem("Start with Windows", toggle_startup, checked=lambda item: is_startup_enabled()),
-        pystray.MenuItem("Quit", quit_app)
-    )
-    
-    icon = pystray.Icon("TetherPad", create_image(), "TetherPad Bridge", menu)
-    icon.run()
+    # Create the tray menu if pystray is available
+    if pystray:
+        menu = pystray.Menu(
+            pystray.MenuItem("Show Logs (Notepad)", open_logs),
+            pystray.MenuItem("Calibrate Controller", open_calibration_wizard),
+            pystray.MenuItem("Start with Windows", toggle_startup, checked=lambda item: is_startup_enabled()),
+            pystray.MenuItem("Quit", quit_app)
+        )
+        icon = pystray.Icon("TetherPad", create_image(), "TetherPad Bridge", menu)
+        icon.run()
+    else:
+        worker.join()
