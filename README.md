@@ -72,6 +72,13 @@ Instead of relying on root permissions or losing the kernel race-condition again
 7. **To view logs:** Right-click the 'T' icon in your system tray and select **Show Logs (Notepad)**.
 8. **To stop playing:** Simply unplug the USB cable or right-click the tray icon and click **Quit**.
 
+## 🧪 Hardware Verification Roadmap
+- [x] **Android 4.4 / 7.0 (Legacy MTK BT HID):** Physically verified on live hardware (buttons, analog axes, triggers, ScreenGuard APK, auto-reconnect, ViGEmBus driver, system tray).
+- [x] **Distribution & Process Management:** Physically verified (cx_Freeze packaging with `queue`/`six`, clean shutdown with graceful `adb kill-server`, zero folder locking).
+- [ ] **Android 12+ (DualSense Multi-Node Split):** Fully verified in CI mock pipeline (13/13 tests passing). Physical hardware verification planned for companion touchpad tracking and `sony_modern` axis layout.
+- [ ] **DualShock 4 on Android 12+:** Physical verification of profile resolution retaining legacy `sony` layout.
+- [ ] **Physical In-Game Rumble:** Physical verification of ADB broadcast haptic trigger (`com.ps5bridge.VIBRATE`) during heavy in-game rumble events.
+
 ## 🧑‍💻 Developer & Contributions
 Developed by Kerem Barbaros Karnabat ([@cadakerem](https://github.com/cadakerem)).
 
