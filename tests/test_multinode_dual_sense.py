@@ -39,7 +39,7 @@ add device 4: /dev/input/event9
         main_node, p_type, name, tp_node = tetherpad.find_device_node()
 
         self.assertEqual(main_node, "/dev/input/event9")
-        self.assertEqual(p_type, "sony")
+        self.assertEqual(p_type, "sony_modern")
         self.assertEqual(name, "DualSense Wireless Controller")
         self.assertEqual(tp_node, "/dev/input/event7")
 
@@ -65,7 +65,7 @@ add device 3: /dev/input/event9
         main_node, p_type, name, tp_node = tetherpad.find_device_node()
 
         self.assertEqual(main_node, "/dev/input/event9")
-        self.assertEqual(p_type, "sony")
+        self.assertEqual(p_type, "sony_modern")
         self.assertEqual(tp_node, "/dev/input/event7")
 
     @patch("subprocess.run")
@@ -86,8 +86,29 @@ add device 2: /dev/input/event9
         main_node, p_type, name, tp_node = tetherpad.find_device_node()
 
         self.assertEqual(main_node, "/dev/input/event9")
-        self.assertEqual(p_type, "sony")
+        self.assertEqual(p_type, "sony_modern")
         self.assertEqual(tp_node, "/dev/input/event2")
+
+    @patch("subprocess.run")
+    def test_find_device_node_ds4_with_touchpad_retains_sony_legacy(self, mock_run):
+        """DualShock 4 (product 05c4 / Wireless Controller) retains legacy sony profile even if touchpad node is split."""
+        ds4_output = """
+add device 1: /dev/input/event7
+  name:     "Wireless Controller Touchpad"
+  vendor:   054c
+  product:  05c4
+add device 2: /dev/input/event9
+  name:     "Wireless Controller"
+  vendor:   054c
+  product:  05c4
+"""
+        mock_run.return_value = MagicMock(stdout=ds4_output)
+        import tetherpad
+        main_node, p_type, name, tp_node = tetherpad.find_device_node()
+
+        self.assertEqual(main_node, "/dev/input/event9")
+        self.assertEqual(p_type, "sony")
+        self.assertEqual(tp_node, "/dev/input/event7")
 
     @patch("subprocess.run")
     def test_find_device_node_legacy_android(self, mock_run):
@@ -194,6 +215,22 @@ add device 1: /dev/input/event4
         self.assertEqual(tetherpad.AXIS_RY, "0005")
         self.assertEqual(tetherpad.AXIS_L2, "0003")
         self.assertEqual(tetherpad.AXIS_R2, "0004")
+
+    def test_resolve_profile_matrix(self):
+        """Test resolve_profile across DualSense, DualShock 4, legacy, and Xbox."""
+        import tetherpad
+        # DualSense by name
+        self.assertEqual(tetherpad.resolve_profile("sony", "DualSense Wireless Controller", "/dev/input/event7"), "sony_modern")
+        # DualSense by product ID (0ce6)
+        self.assertEqual(tetherpad.resolve_profile("sony", "Wireless Controller", "/dev/input/event7", "0ce6"), "sony_modern")
+        # DualSense Edge by product ID (0df2)
+        self.assertEqual(tetherpad.resolve_profile("sony", "Wireless Controller", "/dev/input/event7", "0df2"), "sony_modern")
+        # DualShock 4 with companion touchpad -> retains sony legacy layout
+        self.assertEqual(tetherpad.resolve_profile("sony", "Wireless Controller", "/dev/input/event7", "05c4"), "sony")
+        # DualSense without touchpad node (single-node legacy Android 4.4/7) -> retains sony legacy layout
+        self.assertEqual(tetherpad.resolve_profile("sony", "DualSense Wireless Controller", None), "sony")
+        # Xbox controller -> stays xbox
+        self.assertEqual(tetherpad.resolve_profile("xbox", "Xbox Wireless Controller", None), "xbox")
 
 if __name__ == "__main__":
     unittest.main()

@@ -724,13 +724,17 @@ class MY_DS4_REPORT_EX(Union):
         ('ReportBuffer', c_ubyte * 63)
     ]
 
-try:
+if os.name == "nt":
     import pystray
     from PIL import Image, ImageDraw
-except Exception:
-    pystray = None
-    Image = None
-    ImageDraw = None
+else:
+    try:
+        import pystray
+        from PIL import Image, ImageDraw
+    except Exception:
+        pystray = None
+        Image = None
+        ImageDraw = None
 
 ensure_mapping_config()
 
@@ -833,6 +837,21 @@ def load_mapping(profile_type="sony"):
         DPAD_X = a.get("DPAD_X", {}).get("code")
         DPAD_Y = a.get("DPAD_Y", {}).get("code")
 
+def resolve_profile(detected_profile, device_name="", touchpad_node=None, product_id=""):
+    """
+    Resolves the exact controller profile.
+    Specifically checks whether a Sony controller with a companion touchpad node is a
+    modern DualSense (Product ID 0ce6 / 0df2 or 'DUALSENSE' in name) running under
+    Linux hid-playstation (sony_modern: RX=0003, RY=0004, L2=0002, R2=0005) or a
+    DualShock 4 / legacy gamepad that retains standard Sony HID mapping.
+    """
+    if detected_profile == "sony" and touchpad_node:
+        name_u = (device_name or "").upper()
+        prod = (product_id or "").lower()
+        if "DUALSENSE" in name_u or prod in ("0ce6", "0df2"):
+            return "sony_modern"
+    return detected_profile
+
 def find_device_node():
     """
     Scans adb getevent -i and automatically identifies the controller.
@@ -880,7 +899,8 @@ def find_device_node():
             if "XBOX" in name_u or vendor == "045e":
                 return dev["node"], "xbox", dev["name"] or "Xbox Controller", None
             if any(k in name_u for k in ["WIRELESS CONTROLLER", "SONY", "DUALSENSE", "PLAYSTATION"]) or vendor == "054c":
-                return dev["node"], "sony", dev["name"] or "PlayStation Controller", touchpad_node
+                prof = resolve_profile("sony", dev.get("name", ""), touchpad_node, dev.get("product", ""))
+                return dev["node"], prof, dev["name"] or "PlayStation Controller", touchpad_node
             if any(k in name_u for k in ["GAMEPAD", "JOYSTICK", "MTK BT HID"]):
                 return dev["node"], "sony", dev["name"] or "Generic Controller", None
     except Exception:
@@ -1158,7 +1178,7 @@ def run():
             )
             
             # ADIM 4.5: Companion Touchpad dinleyicisi (Modern Android 12+ / DualSense)
-            if touchpad_node and detected_profile == "sony":
+            if touchpad_node and detected_profile in ("sony", "sony_modern"):
                 touchpad_t = threading.Thread(
                     target=touchpad_worker,
                     args=(touchpad_node, gamepad, stop_event),
@@ -1166,11 +1186,10 @@ def run():
                 )
                 touchpad_t.start()
             
-            active_profile = "sony_modern" if (touchpad_node and detected_profile == "sony") else detected_profile
-            print(f"Listening for {active_profile.upper()} input... (Ctrl+C to stop completely)")
+            print(f"Listening for {detected_profile.upper()} input... (Ctrl+C to stop completely)")
             print("=> NOTE: Undefined inputs will be ignored.\n")
             
-            load_mapping(active_profile)
+            load_mapping(detected_profile)
             
             def map_axis(val):
                 return max(0, min(255, val))
