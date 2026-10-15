@@ -44,11 +44,10 @@ This software uses core Linux kernel commands (`getevent`) to read inputs, makin
 |--------|-----------------|--------|
 | Sony Xperia E4g (E2003) | Android 4.4.4 (KitKat) | ✅ Working flawlessly (Single-node legacy BT HID) |
 | LG Aristo (MS210) | Android 7.0 (Nougat) | ✅ Working flawlessly (Single-node legacy BT HID) |
-| Google Pixel (Stock) | Android 13–17 | 🛠️ Multi-node split support implemented (v1.4.1, mock-verified via test suite); live physical dogfooding in progress |
 | Samsung (Knox) Devices | Android 10+ | ⏳ Needs testing |
 | Xiaomi (MIUI/HyperOS) | Android 10+ | ⏳ Needs testing |
 
-> **Testing & Verification Transparency:** The v1.4.1 multi-node architecture was designed directly from official Linux kernel `hid-playstation` device tree specifications and verified via mock unit test suites (`tests/test_multinode_dual_sense.py`). While kernel-level topology parsing and thread synchronization are proven, community feedback with real hardware on Google Pixel and other modern Android 12+ flagships is actively welcomed.
+> **Testing & Verification Transparency:** The v1.4.1 multi-node architecture was designed directly from official Linux kernel `hid-playstation` device tree specifications and verified via mock unit test suites (`tests/test_multinode_dual_sense.py`). While kernel-level topology parsing and thread synchronization are proven, community feedback with real hardware on modern Android 12+ flagships is actively welcomed.
 
 > **Note on Legacy Devices & Next-Gen Controllers:** If you are repurposing an older Android device as your bridge (especially Android 4.x - 7.x), you may experience pairing issues or connection instability with **next-gen controllers (Xbox Series X/S or PS5 DualSense)**. These modern gamepads are optimized for newer Bluetooth protocols natively supported by Android 10+. Conversely, last-gen Bluetooth controllers (like the PS4 DualShock 4) use classic profiles and pair flawlessly even on devices as old as Android 4.
 
