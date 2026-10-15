@@ -653,9 +653,10 @@ class GamepadBridge:
             if hasattr(self, '_stop_rumble'):
                 self._stop_rumble.set()
                 self._rumble_event.set()
-            if hasattr(self, 'pad') and self.pad is not None:
-                del self.pad
-                self.pad = None
+            with self.lock:
+                if hasattr(self, 'pad') and self.pad is not None:
+                    del self.pad
+                    self.pad = None
         except Exception:
             pass
 
