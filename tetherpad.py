@@ -1047,7 +1047,7 @@ def _is_stubborn_device():
 def setup_screenguard():
     apk_path = os.path.join(get_base_path(), "ScreenGuard.apk")
     if os.path.exists(apk_path):
-        print("[+] ScreenGuard (BlackHole) is being prepared...")
+        print("[+] TetherPad ScreenGuard is being prepared...")
         
         # Kurulu olup olmadigini kontrol et
         check = subprocess.run([adb_cmd, "shell", "pm", "list", "packages", "com.ps5bridge.screenguard"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)

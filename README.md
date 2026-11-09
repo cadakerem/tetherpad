@@ -47,6 +47,7 @@ This software uses core Linux kernel commands (`getevent`) to read inputs, makin
 |--------|-----------------|--------|
 | Samsung Galaxy S25 / S25 FE (SM-S731B) | Android 16 | ✅ Tested & Working flawlessly (Multi-node evdev + Touchpad click + Rumble) |
 | Sony Xperia E4g (E2003) | Android 4.4.4 (KitKat) | ✅ Working flawlessly (Single-node legacy BT HID) |
+| Grundig GTB 1050 | Android 4.4.4 (KitKat) | ✅ Tested & Working (Rockchip RK3188, Legacy BT HID + ScreenGuard) |
 | LG Aristo (MS210) | Android 7.0 (Nougat) | ✅ Working flawlessly (Single-node legacy BT HID) |
 | Xiaomi (MIUI/HyperOS) | Android 10+ | ⏳ Needs testing |
 
