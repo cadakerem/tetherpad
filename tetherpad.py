@@ -1053,15 +1053,28 @@ def setup_screenguard():
         check = subprocess.run([adb_cmd, "shell", "pm", "list", "packages", "com.ps5bridge.screenguard"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
         if "com.ps5bridge.screenguard" not in check.stdout:
             print("  [+] Installing TetherPad APK to phone...")
+            android_ver = _device_info.get("android_ver", 99)
+            install_cmd = [adb_cmd, "install", "-r", "-d"]
+            if android_ver >= 6:
+                install_cmd.append("-g")
+            install_cmd.append(apk_path)
+
             res = subprocess.run(
-                [adb_cmd, "install", "-r", "-d", "-g", apk_path],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                install_cmd,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
             )
-            if res.returncode != 0:
-                subprocess.run(
+            installed = (res.returncode == 0 and "Success" in res.stdout)
+
+            # If failed and -g was used (unsupported on Android < 6), retry without -g
+            if not installed and "-g" in install_cmd:
+                fallback_res = subprocess.run(
                     [adb_cmd, "install", "-r", "-d", apk_path],
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
                 )
+                installed = (fallback_res.returncode == 0 and "Success" in fallback_res.stdout)
+
+            if not installed:
+                print("  [-] ScreenGuard APK installation failed. Screen protection may not be active.")
         else:
             print("  [+] APK is already installed, skipping install.")
             
