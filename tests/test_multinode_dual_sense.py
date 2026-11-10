@@ -198,6 +198,23 @@ add device 1: /dev/input/event4
 
             self.assertEqual(len(errors), 0)
 
+    def test_gamepad_bridge_ds4_battery_reporting(self):
+        """Verify GamepadBridge initializes DS4 battery reporting to 100% charging (0x1A) and preserves it on update."""
+        import tetherpad
+        with patch.object(tetherpad, "vg") as mock_vg:
+            mock_pad = MagicMock()
+            mock_vg.VDS4Gamepad.return_value = mock_pad
+            bridge = tetherpad.GamepadBridge("sony", emulation="ds4")
+            self.assertEqual(bridge.ext_report.Report.bBatteryLvl, tetherpad.DS4_BATTERY_FULL_CHARGING)
+            self.assertEqual(bridge.ext_report.Report.bBatteryLvlSpecial, tetherpad.DS4_BATTERY_FULL_CHARGING)
+            self.assertEqual(bridge.ext_report.Report.bBatteryLvl, 0x1A)
+
+            with patch("vgamepad.win.vigem_client.vigem_target_ds4_update_ex_ptr") as mock_update_ex:
+                bridge.update()
+                self.assertEqual(bridge.ext_report.Report.bBatteryLvl, tetherpad.DS4_BATTERY_FULL_CHARGING)
+                self.assertEqual(bridge.ext_report.Report.bBatteryLvlSpecial, tetherpad.DS4_BATTERY_FULL_CHARGING)
+                mock_update_ex.assert_called_once()
+
     def test_mapping_sony_modern_evdev_axes(self):
         """Verify modern hid-playstation profile maps right stick and triggers according to Linux evdev."""
         import tetherpad

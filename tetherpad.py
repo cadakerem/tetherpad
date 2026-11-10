@@ -449,6 +449,14 @@ def send_vibrate_broadcast(left, right, timeout=2):
         timeout=timeout
     )
 
+# Virtual DS4 Battery Reporting Constants:
+# In DS4 HID protocol:
+# - Bits 0-3: Capacity nibble (0-10 -> 0x0A = 100%)
+# - Bit 4 (0x10): USB Cable connected / charging flag
+# Combined 0x1A tells Windows and Steam that the controller is 100% full and plugged in,
+# completely silencing "Low Battery" notifications.
+DS4_BATTERY_FULL_CHARGING = 0x1A
+
 class GamepadBridge:
     """Wrapper that unifies Virtual DualShock 4 and Virtual Xbox 360 gamepads."""
     def __init__(self, c_type="sony", emulation="ds4"):
@@ -469,6 +477,11 @@ class GamepadBridge:
             self.ext_report.Report.sPreviousTouch[1].bIsUpTrackingNum1 = 0x80
             self.ext_report.Report.sPreviousTouch[1].bIsUpTrackingNum2 = 0x80
             self.touch_packet_counter = 0
+            # Virtual DS4 Battery Reporting:
+            # Set to 100% capacity (0x0A) with USB Cable / Charging flag (0x10) -> 0x1A.
+            # Suppresses Steam / Windows "Low Battery" notifications.
+            self.ext_report.Report.bBatteryLvl = DS4_BATTERY_FULL_CHARGING
+            self.ext_report.Report.bBatteryLvlSpecial = DS4_BATTERY_FULL_CHARGING
             print("[OK] Virtual DualShock 4 controller active on Windows/Steam!")
 
         # Asynchronous rumble worker to prevent process spawning storms
@@ -648,6 +661,8 @@ class GamepadBridge:
                 self.ext_report.Report.bSpecial = self.pad.report.bSpecial
                 self.ext_report.Report.bTriggerL = self.pad.report.bTriggerL
                 self.ext_report.Report.bTriggerR = self.pad.report.bTriggerR
+                self.ext_report.Report.bBatteryLvl = DS4_BATTERY_FULL_CHARGING
+                self.ext_report.Report.bBatteryLvlSpecial = DS4_BATTERY_FULL_CHARGING
                 vcli.vigem_target_ds4_update_ex_ptr(self.pad._busp, self.pad._devicep, ctypes.cast(ctypes.pointer(self.ext_report), ctypes.POINTER(vcom.DS4_REPORT_EX)))
             else:
                 self.pad.update()
