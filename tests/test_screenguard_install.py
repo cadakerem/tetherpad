@@ -1,5 +1,6 @@
 import os
 import sys
+import subprocess
 import unittest
 from unittest.mock import patch, MagicMock
 
@@ -103,6 +104,43 @@ class TestScreenGuardInstall(unittest.TestCase):
         self.assertEqual(len(install_cmds), 2)
         self.assertIn("-g", install_cmds[0])
         self.assertNotIn("-g", install_cmds[1])
+
+    @patch("subprocess.run")
+    def test_immersive_mode_modern_android(self, mock_run):
+        """On Android >= 5, set_immersive_mode uses settings put global policy_control."""
+        import tetherpad
+        tetherpad._device_info = {"android_ver": 11}
+
+        tetherpad.set_immersive_mode(True)
+        mock_run.assert_called_with(
+            [tetherpad.adb_cmd, "shell", "settings", "put", "global", "policy_control", "immersive.navigation=*"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2
+        )
+
+        tetherpad.set_immersive_mode(False)
+        mock_run.assert_called_with(
+            [tetherpad.adb_cmd, "shell", "settings", "put", "global", "policy_control", "null*"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2
+        )
+
+    @patch("subprocess.run")
+    def test_immersive_mode_query_and_toggle(self, mock_run):
+        """is_immersive_mode_enabled queries settings, and toggle flips state."""
+        import tetherpad
+        tetherpad._device_info = {"android_ver": 10}
+
+        mock_run.return_value = MagicMock(stdout="immersive.navigation=*", returncode=0)
+        self.assertTrue(tetherpad.is_immersive_mode_enabled())
+
+        mock_run.return_value = MagicMock(stdout="null*", returncode=0)
+        self.assertFalse(tetherpad.is_immersive_mode_enabled())
+
+        # Toggle when disabled should enable it
+        tetherpad.toggle_immersive_mode()
+        mock_run.assert_called_with(
+            [tetherpad.adb_cmd, "shell", "settings", "put", "global", "policy_control", "immersive.navigation=*"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2
+        )
 
 
 if __name__ == "__main__":

@@ -1042,6 +1042,47 @@ def _is_stubborn_device():
     return _device_info.get("android_ver", 99) <= 7
 
 # ============================================================
+# IMMERSIVE MODE & NAVIGATION BAR CONTROL
+# ============================================================
+_immersive_mode_enabled = False
+
+def set_immersive_mode(enabled: bool = True):
+    """Enables or disables automatic navigation bar auto-hiding (Immersive Sticky) via ADB."""
+    global _immersive_mode_enabled
+    _immersive_mode_enabled = enabled
+    try:
+        android_ver = _device_info.get("android_ver", 99)
+        if android_ver >= 5:
+            val = "immersive.navigation=*" if enabled else "null*"
+            subprocess.run(
+                [adb_cmd, "shell", "settings", "put", "global", "policy_control", val],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2
+            )
+    except (subprocess.SubprocessError, OSError, ValueError) as e:
+        print(f"[Immersive Mode] Warning: {e}")
+
+def is_immersive_mode_enabled() -> bool:
+    """Checks whether immersive mode navigation bar policy is active."""
+    try:
+        android_ver = _device_info.get("android_ver", 99)
+        if android_ver >= 5:
+            res = subprocess.run(
+                [adb_cmd, "shell", "settings", "get", "global", "policy_control"],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=2
+            )
+            return "immersive.navigation" in res.stdout or "immersive.full" in res.stdout
+    except (subprocess.SubprocessError, OSError, ValueError):
+        pass
+    return _immersive_mode_enabled
+
+def toggle_immersive_mode(icon=None, item=None):
+    """Toggles Immersive Sticky Mode on the connected Android device."""
+    new_state = not is_immersive_mode_enabled()
+    set_immersive_mode(new_state)
+    state_str = "ENABLED (Auto-hide on)" if new_state else "DISABLED (Normal bars)"
+    print(f"[+] Immersive Sticky Mode: {state_str}")
+
+# ============================================================
 # SCREEN GUARD (KARA DELIK) OTOMATIK KURULUM
 # ============================================================
 def setup_screenguard():
@@ -1082,13 +1123,15 @@ def setup_screenguard():
             [adb_cmd, "shell", "am", "start", "-n", "com.ps5bridge.screenguard/.MainActivity"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
-        print("[+] Screen secured (Press Home on the phone to exit).")
+        set_immersive_mode(True)
+        print("[+] Screen secured & Immersive Mode enabled (Press Home on the phone to exit).")
     else:
         print("[-] ScreenGuard.apk not found. Screen protection skipped.")
 
 def teardown_screenguard():
-    """Program kapandiginda siyah ekrani kapatir ve APK'yi kaldirir."""
+    """Program kapandiginda siyah ekrani kapatir, immersive modunu sifirlar ve APK'yi kaldirir."""
     print("  [4] ScreenGuard stopping and uninstalling...")
+    set_immersive_mode(False)
     subprocess.run(
         [adb_cmd, "shell", "am", "force-stop", "com.ps5bridge.screenguard"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
@@ -1506,6 +1549,7 @@ if __name__ == '__main__':
             pystray.MenuItem("Show Logs (Notepad)", open_logs),
             pystray.MenuItem("Calibrate Controller", open_calibration_wizard),
             pystray.MenuItem("Test Vibration (1s)", test_vibration),
+            pystray.MenuItem("Auto-hide Navigation Bar (Immersive)", toggle_immersive_mode, checked=lambda item: is_immersive_mode_enabled()),
             pystray.MenuItem("Start with Windows", toggle_startup, checked=lambda item: is_startup_enabled()),
             pystray.MenuItem("Quit", quit_app)
         )
